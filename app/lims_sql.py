@@ -18,7 +18,7 @@ from lims_query import (
     query_lot_status
 )
 
-config.setup(environment='PROD')
+# config.setup(environment='PROD')
 
 def main():
     while True:
