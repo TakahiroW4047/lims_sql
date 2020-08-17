@@ -1,0 +1,42 @@
+
+# pull official base image
+FROM python:3.8.3-buster
+
+# set working directory
+WORKDIR /usr/src/app
+
+# create the app user
+RUN addgroup --system app
+RUN adduser  --system app --ingroup app
+
+# set environment varialbes
+ENV PYTHONDONTWRITEBYTECODE 1
+ENV PYTHONBUFFERED 1
+
+# copy project
+COPY . /usr/src/app
+
+# install psycopg2 dependencies
+RUN apt-get update && apt-get install
+RUN apt-get install libpq-dev
+
+# install cx_Oracle dependencies
+RUN apt-get install libaio1
+RUN echo /usr/src/app/instantclient* > /etc/ld.so.conf.d/oracle-instantclient.conf \
+    && ldconfig
+
+# install dependencies
+RUN pip install --upgrade pip
+COPY ./requirements.txt .
+RUN pip install --no-cache-dir -r requirements.txt
+
+
+# chown all the files to the app user
+RUN chown -R app:app /usr/src/app
+RUN chmod +x /usr/src/app/entrypoint.sh
+
+# change to the app user
+USER app
+
+# run entrypoint.sh
+ENTRYPOINT ["/usr/src/app/entrypoint.sh"]
