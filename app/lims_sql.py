@@ -22,11 +22,11 @@ config.setup(environment='PROD')
 
 def main():
     # while True:
-        # result = AdvateSampleResults().result
     dispo  = DispositionHistory().result
-
-    # DbWriteSampleResult(result, table_name='sample_results')
     DbWriteDispoHistory(dispo, table_name='dispo_history')
+
+    result = SampleResults().result
+    DbWriteSampleResult(result, table_name='sample_results')
 
     update_date = pd.DataFrame({"update_date": [local_datetime()]})
     DbWriteUpdateDatetime(update_date, table_name='update_date')
@@ -157,13 +157,15 @@ class LotNumberFinalContainer():
     rixubis = _return_lot_values_from(df_rixubis)
 
 
-class AdvateSampleResults(LotNumberFinalContainer):
+class SampleResults():
     def __init__(self):
         oracle = OracleDB()
-        self.sample_results(oracle, LotNumberFinalContainer.advate)
+        postgres = PostgresDB()
+        lots = postgres.read(table_name='dispo_history')['LOT_ID'].values
+        self.sample_results(oracle, lots)
 
     def sample_results(self, oracle, lots):
-        query_substitute = oracle.query_string_substitution(lots)
+        query_substitute = oracle.query_string_substitution('lot_id', lots)
         query = query_test_start_and_completion_time(query_substitute)
         df_test_completion = oracle.search(query) 
 
@@ -180,6 +182,7 @@ class AdvateSampleResults(LotNumberFinalContainer):
         column_order = [
                 'LOT_NUMBER',
                 'MATERIAL_NAME',
+                'MATERIAL_TYPE',
                 'LOT_ID',
                 'SUBMISSION_ID',
                 'SAMPLE_ID',
@@ -481,38 +484,41 @@ class DispositionHistory(LotNumberFinalContainer):
         return final_df
 
     def _column_pruning(self, df):
-        return df[['LOT_ID', 'LOT_NUMBER', 'MATERIAL_NAME']]
+        return df[['LOT_ID', 'LOT_NUMBER', 'MATERIAL_NAME', 'MATERIAL_TYPE']]
 
     def _reorder_columns(self, df):
-        return df[['LOT_NUMBER', 'LOT_ID', 'MATERIAL_NAME', 'ACTIVE', 'COMPLETE', 'READY FOR RELEASE', 'DISPOSITIONED', 'SUSPECT']]
+        return df[['LOT_NUMBER', 'LOT_ID', 'MATERIAL_NAME', 'MATERIAL_TYPE', 'ACTIVE', 'COMPLETE', 'READY FOR RELEASE', 'DISPOSITIONED', 'SUSPECT']]
 
     def _truncate_lot_ids(self, df):
         return df.drop_duplicates(subset='LOT_ID')
 
 
 class PostgresDB:
-    _db_uri = os.getenv('SQLALCHEMY_DB_URI')
-    engine = create_engine(_db_uri, echo=False)
+    def __init__(self):
+        _db_uri = os.getenv('SQLALCHEMY_DB_URI')
+        self.engine = create_engine(_db_uri, echo=False)
 
     def read(self, table_name):
-        return pd.read_sql_table(table_name, con=engine)
+        return pd.read_sql_table(table_name, con=self.engine)
 
 
-class DbWriteSampleResult(PostgresDB):
+class DbWriteSampleResult():
     def __init__(self, df, table_name):
+        self.postgres = PostgresDB()
         self.table_name=table_name
         self._db_write(df)   
 
     def _db_write(self, df):
         df.to_sql(
             self.table_name,
-            PostgresDB.engine,
+            self.postgres.engine,
             if_exists='replace',
             index=False,
             chunksize=500,
             dtype={
                 "LOT_NUMBER": Text,
                 "MATERIAL_NAME": Text,
+                "MATERIAL_TYPE": Text,
                 "LOT_ID": Integer,
                 "SUBMISSION_ID": Integer,
                 "SAMPLE_ID": Integer,
@@ -531,15 +537,16 @@ class DbWriteSampleResult(PostgresDB):
         )
 
 
-class DbWriteDispoHistory(PostgresDB):
+class DbWriteDispoHistory():
     def __init__(self, df, table_name):
+        self.postgres = PostgresDB()
         self.table_name = table_name
         self._db_write(df)
 
     def _db_write(self, df):
         df.to_sql(
             self.table_name,
-            PostgresDB.engine,
+            self.postgres.engine,
             if_exists='replace',
             index=False,
             chunksize=500,
@@ -547,6 +554,7 @@ class DbWriteDispoHistory(PostgresDB):
                 "LOT_NUMBER": Text,
                 "LOT_ID": Integer,
                 "MATERIAL_NAME": Text,
+                "MATERIAL_TYPE": Text,
                 "ACTIVE": DateTime,
                 "COMPLETE": DateTime,
                 "READY FOR RELEASE": DateTime,
@@ -556,15 +564,16 @@ class DbWriteDispoHistory(PostgresDB):
         )
 
 
-class DbWriteUpdateDatetime(PostgresDB):
+class DbWriteUpdateDatetime():
     def __init__(self, df, table_name):
+        self.postgres = PostgresDB()
         self.table_name = table_name
         self._db_write(df)
 
     def _db_write(self, df):
         df.to_sql(
             self.table_name,
-            PostgresDB.engine,
+            self.postgres.engine,
             if_exists='replace',
             index=False,
             chunksize=500,
