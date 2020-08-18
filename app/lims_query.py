@@ -1,22 +1,42 @@
-def query_advate_lots():
+# def query_advate_lots():
+#     return """
+#         SELECT
+#             lot_id,
+#             lot_number,        
+#             material_name,
+#             material_type,
+#             material_datagroup,
+#             date_in,
+#             due_date,
+#             condition
+#         FROM SQA_LOTS WHERE
+#             (
+#                 lot_number LIKE 'TAA_____A'
+#                 OR lot_number LIKE 'TAA_____'
+#             )
+#             AND date_in > to_date('01-JAN-17', 'DD-MON-YY')
+#     """
+
+def query_final_container_lots():
     return """
         SELECT
             lot_id,
-            lot_number,        
+            lot_number,
             material_name,
             material_type,
-            material_datagroup,
             date_in,
             due_date,
             condition
-        FROM SQA_LOTS WHERE
+        FROM sqa_lots WHERE
             (
-                lot_number LIKE 'TAA_____A'
-                OR lot_number LIKE 'TAA_____'
+                (lot_number LIKE 'TAA_____A' OR lot_number LIKE 'TAA_____') OR
+                (lot_number LIKE 'TVA_____A' OR lot_number LIKE 'TVA_____') OR
+                (lot_number LIKE 'THA_____A' OR lot_number LIKE 'THA_____') OR
+                (lot_number LIKE 'TRA_____A' OR lot_number LIKE 'TRA_____') OR
+                (lot_number LIKE 'TNA_____A' OR lot_number LIKE 'TNA_____')
             )
             AND date_in > to_date('01-JAN-17', 'DD-MON-YY')
     """
-
 
 def query_test_start_and_completion_time(lots):
     return f"""

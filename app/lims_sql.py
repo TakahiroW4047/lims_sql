@@ -12,7 +12,7 @@ from sqlalchemy import create_engine
 from sqlalchemy.types import Integer, Text, String, DateTime, BigInteger
 
 from lims_query import (
-    query_advate_lots,
+    query_final_container_lots,
     query_test_start_and_completion_time,
     query_sample_receipt_and_review_dates,
     query_lot_status
@@ -23,7 +23,7 @@ config.setup(environment='PROD')
 def main():
     while True:
         result = AdvateSampleResults().result
-        dispo  = AdvateDispositionHistory().result
+        dispo  = DispositionHistory().result
 
         DbWriteSampleResult(result, table_name='sample_results')
         DbWriteDispoHistory(dispo, table_name='dispo_history')
@@ -84,20 +84,79 @@ class OracleDB:
         return result
 
 
-class Advate:
+class LotNumberFinalContainer():
+    def _filter_advate(df):
+        df = df[df['LOT_NUMBER'].str.startswith('TAA')]
+        return df
+
+    def _filter_vonvendi(df):
+        boolean = (
+            df['LOT_NUMBER'].str.startswith('TVA') &
+            df['MATERIAL_NAME'].isin(['RVWF']) & 
+            (
+                df['MATERIAL_TYPE'].isin(['BULK DRUG'])) | (df['MATERIAL_TYPE'].isin(['FINAL CONTAINER'])
+            )
+        )
+        return df[boolean]
+
+    def _filter_hemofil(df):
+        boolean = (
+            df['LOT_NUMBER'].str.startswith('THA') &
+            (
+                (df['MATERIAL_NAME'].isin(['AHF-M BULK']) & df['MATERIAL_TYPE'].isin(['FORM_FINISH'])) |
+                (df['MATERIAL_NAME'].isin(['AHFM FINAL CONTAINER']) & df['MATERIAL_TYPE'].isin(['FINAL_CONTAINER']))
+            )
+        )
+        return df[boolean]
+
+    def _filter_recombinant(df):
+        boolean = (
+            df['LOT_NUMBER'].str.startswith('TRA') &
+            (
+                (df['MATERIAL_NAME'].isin(['RAHF BDS']) & df['MATERIAL_TYPE'].isin(['FORM_FINISH'])) |
+                (df['MATERIAL_NAME'].isin(['RAHF FINAL CONTAINER']) & df['MATERIAL_TYPE'].isin(['FINAL_CONTAINER']))
+            )
+        )
+        return df[boolean]
+
+    def _filter_rixubis(df):
+        boolean = (
+            df['LOT_NUMBER'].str.startswith('TNA') &
+            (
+                (df['MATERIAL_NAME'].isin(['RFIX_BDS']) & df['MATERIAL_TYPE'].isin(['FORM_FINISH'])) |
+                (df['MATERIAL_NAME'].isin(['RFIX_FINAL_CONTAINER']) & df['MATERIAL_TYPE'].isin(['FINAL_CONTAINER']))
+            )
+        )
+        return df[boolean]
+
+    def _return_lot_values_from(df):
+        return df['LOT_ID'].values
+
     _oracle = OracleDB()
-    _query = query_advate_lots()
-    _df_advate_lots = _oracle.search(_query)
-    lots = _df_advate_lots['LOT_ID'].values
+    _query = query_final_container_lots()
+    _df_lots = _oracle.search(_query)
+
+    df_advate = _filter_advate(_df_lots)
+    df_vonvendi = _filter_vonvendi(_df_lots)
+    df_hemofil = _filter_hemofil(_df_lots)
+    df_recombinant = _filter_recombinant(_df_lots)
+    df_rixubis = _filter_rixubis(_df_lots)
+
+    alllots = _return_lot_values_from(pd.concat([df_advate, df_vonvendi, df_hemofil, df_recombinant, df_rixubis], ignore_index=True))
+    advate = _return_lot_values_from(df_advate)
+    vonvendi = _return_lot_values_from(df_vonvendi)
+    hemofil = _return_lot_values_from(df_hemofil)
+    recombinant = _return_lot_values_from(df_recombinant)
+    rixubis = _return_lot_values_from(df_rixubis)
 
 
-class AdvateSampleResults(Advate):
+class AdvateSampleResults(LotNumberFinalContainer):
     def __init__(self):
         oracle = OracleDB()
-        self.sample_results(oracle, Advate.lots)
+        self.sample_results(oracle, LotNumberFinalContainer.advate)
 
-    def sample_results(self, oracle, advate_lots):
-        query_substitute = oracle.query_string_substitution(advate_lots)
+    def sample_results(self, oracle, lots):
+        query_substitute = oracle.query_string_substitution(lots)
         query = query_test_start_and_completion_time(query_substitute)
         df_test_completion = oracle.search(query) 
 
@@ -322,13 +381,13 @@ class AdvateSampleResults(Advate):
         df.loc[:,'REVIEW_DURATION'].astype('timedelta64[h]')
 
 
-class AdvateDispositionHistory(Advate):
+class DispositionHistory(LotNumberFinalContainer):
     def __init__(self):
         oracle = OracleDB()
-        self._disposition_history(oracle, Advate.lots)
+        self._disposition_history(oracle, LotNumberFinalContainer.alllots)
 
-    def _disposition_history(self, oracle, advate_lots):
-        string_substitution = oracle.query_string_substitution(advate_lots)
+    def _disposition_history(self, oracle, lots):
+        string_substitution = oracle.query_string_substitution(lots)
         query = query_lot_status(string_substitution)
         df_dispo_history = oracle.search(query)
         self.result = self._datawrangling(df_dispo_history)
@@ -510,4 +569,3 @@ class DbWriteUpdateDatetime(PostgresDB):
 
 if __name__ == "__main__":
     main()
-    
