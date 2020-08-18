@@ -21,17 +21,17 @@ from lims_query import (
 config.setup(environment='PROD')
 
 def main():
-    while True:
-        result = AdvateSampleResults().result
-        dispo  = DispositionHistory().result
+    # while True:
+        # result = AdvateSampleResults().result
+    dispo  = DispositionHistory().result
 
-        DbWriteSampleResult(result, table_name='sample_results')
-        DbWriteDispoHistory(dispo, table_name='dispo_history')
+    # DbWriteSampleResult(result, table_name='sample_results')
+    DbWriteDispoHistory(dispo, table_name='dispo_history')
 
-        update_date = pd.DataFrame({"update_date": [local_datetime()]})
-        DbWriteUpdateDatetime(update_date, table_name='update_date')
-        print("Instance Ran At: ", datetime.now())
-        time.sleep(600)
+    update_date = pd.DataFrame({"update_date": [local_datetime()]})
+    DbWriteUpdateDatetime(update_date, table_name='update_date')
+    print("Instance Ran At: ", datetime.now())
+        # time.sleep(600)
     
     return None
 
@@ -75,12 +75,19 @@ class OracleDB:
         columns = [row[0] for row in description]
         return pd.DataFrame(c.fetchall(), columns=columns)
 
-    def query_string_substitution(self, iterable):
+    def query_string_substitution(self, column_name, iterable):
+        iterable = iterable
         result = '('
-        for item in iterable:
-            result += f"{item},"
-        result = result[:-1]
-        result += ')'
+        while any(iterable):
+            chunk = iterable[:900]
+            rest = iterable[900:]
+            iterable = rest
+            temp_numbers = '('
+            for number in chunk:
+                temp_numbers += (str(number)+',')
+            temp_numbers = temp_numbers[:-1] + ')'
+            result += (column_name + ' IN ' + temp_numbers + ' OR ')
+        result = result[:-3] + ')' 
         return result
 
 
@@ -387,7 +394,7 @@ class DispositionHistory(LotNumberFinalContainer):
         self._disposition_history(oracle, LotNumberFinalContainer.alllots)
 
     def _disposition_history(self, oracle, lots):
-        string_substitution = oracle.query_string_substitution(lots)
+        string_substitution = oracle.query_string_substitution('object_id', lots)
         query = query_lot_status(string_substitution)
         df_dispo_history = oracle.search(query)
         self.result = self._datawrangling(df_dispo_history)

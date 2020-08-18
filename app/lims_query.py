@@ -130,7 +130,7 @@ def query_sample_receipt_and_review_dates(lots):
         timestamp DESC
     """
 
-def query_lot_status(lots):
+def query_lot_status(substitute):
     return f"""
     SELECT 
         sqa_lots.lot_id,
@@ -149,7 +149,7 @@ def query_lot_status(lots):
                 initial_state,
                 final_state
             FROM naiv_instance_history WHERE
-                object_id IN {lots}
+                {substitute}
         ) history
         ON sqa_lots.lot_id = history.object_id
     ORDER BY
