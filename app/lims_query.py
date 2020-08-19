@@ -1,28 +1,49 @@
-def query_advate_lots():
+# def query_advate_lots():
+#     return """
+#         SELECT
+#             lot_id,
+#             lot_number,        
+#             material_name,
+#             material_type,
+#             material_datagroup,
+#             date_in,
+#             due_date,
+#             condition
+#         FROM SQA_LOTS WHERE
+#             (
+#                 lot_number LIKE 'TAA_____A'
+#                 OR lot_number LIKE 'TAA_____'
+#             )
+#             AND date_in > to_date('01-JAN-17', 'DD-MON-YY')
+#     """
+
+def query_final_container_lots():
     return """
         SELECT
             lot_id,
-            lot_number,        
+            lot_number,
             material_name,
             material_type,
-            material_datagroup,
             date_in,
             due_date,
             condition
-        FROM SQA_LOTS WHERE
+        FROM sqa_lots WHERE
             (
-                lot_number LIKE 'TAA_____A'
-                OR lot_number LIKE 'TAA_____'
+                (lot_number LIKE 'TAA_____A' OR lot_number LIKE 'TAA_____') OR
+                (lot_number LIKE 'TVA_____A' OR lot_number LIKE 'TVA_____') OR
+                (lot_number LIKE 'THA_____A' OR lot_number LIKE 'THA_____') OR
+                (lot_number LIKE 'TRA_____A' OR lot_number LIKE 'TRA_____') OR
+                (lot_number LIKE 'TNA_____A' OR lot_number LIKE 'TNA_____')
             )
             AND date_in > to_date('01-JAN-17', 'DD-MON-YY')
     """
 
-
-def query_test_start_and_completion_time(lots):
+def query_test_start_and_completion_time(substitution):
     return f"""
     SELECT 
         results.lot_number,
         results.material_name,
+        results.material_type,
         results.lot_id,
         results.submission_id,
         results.sample_id,
@@ -40,6 +61,7 @@ def query_test_start_and_completion_time(lots):
             SELECT 
                 results.lot_number,
                 results.material_name,
+                results.material_type,
                 results.lot_id,
                 nai_tasks.sample_id,
                 nai_tasks.submission_id,
@@ -56,15 +78,17 @@ def query_test_start_and_completion_time(lots):
                         submission_id,
                         lot_number,
                         material_name,
+                        material_type,
                         lots.lot_id
                     FROM sqa_samples samples INNER JOIN
                         (
                             SELECT
                                 lot_id,
                                 lot_number,
-                                material_name
+                                material_name,
+                                material_type
                             FROM SQA_LOTS WHERE
-                                lot_id IN {lots}
+                                {substitution}
                         )   lots
                     ON samples.lot_id = lots.lot_id
                 ) results
@@ -74,7 +98,7 @@ def query_test_start_and_completion_time(lots):
     ON nai_workspace.task_id = results.task_id
     """
 
-def query_sample_receipt_and_review_dates(lots):
+def query_sample_receipt_and_review_dates(substitution):
     return f"""
     SELECT 
         task_list.lot_id,
@@ -97,7 +121,7 @@ def query_sample_receipt_and_review_dates(lots):
                     FROM sqa_samples INNER JOIN
                         (
                             SELECT lot_id FROM SQA_LOTS WHERE
-                                lot_id IN {lots}
+                                {substitution}
                         )   lots
                     ON sqa_samples.lot_id = lots.lot_id
                 ) submission_list
@@ -110,12 +134,13 @@ def query_sample_receipt_and_review_dates(lots):
         timestamp DESC
     """
 
-def query_lot_status(lots):
+def query_lot_status(substitute):
     return f"""
     SELECT 
         sqa_lots.lot_id,
         sqa_lots.lot_number,
         sqa_lots.material_name,
+        sqa_lots.material_type,
         history.timestamp,
         history.class,
         history.initial_state,
@@ -129,7 +154,7 @@ def query_lot_status(lots):
                 initial_state,
                 final_state
             FROM naiv_instance_history WHERE
-                object_id IN {lots}
+                {substitute}
         ) history
         ON sqa_lots.lot_id = history.object_id
     ORDER BY
