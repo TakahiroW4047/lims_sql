@@ -18,10 +18,11 @@ from lims_query import (
     query_lot_status
 )
 
-# config.setup(environment='PROD')
+config.setup(environment='PROD')
 
 def main():
     # while True:
+    start_time = datetime.now()
     dispo  = DispositionHistory().result
     DbWriteDispoHistory(dispo, table_name='dispo_history')
 
@@ -30,7 +31,7 @@ def main():
 
     update_date = pd.DataFrame({"update_date": [local_datetime()]})
     DbWriteUpdateDatetime(update_date, table_name='update_date')
-    print("Instance Ran At: ", datetime.now())
+    print("Instance Duration: ", datetime.now() - start_time)
         # time.sleep(600)
     
     return None
@@ -136,6 +137,12 @@ class LotNumberFinalContainer():
         )
         return df[boolean]
 
+    def _filter_bds(df):
+        boolean = (
+            df['MATERIAL_NAME'].isin(['RAHF BDS', 'RAHF_PFM_BDS', 'BAX 855'])
+        )
+        return df[boolean]
+
     def _return_lot_values_from(df):
         return df['LOT_ID'].values
 
@@ -148,13 +155,15 @@ class LotNumberFinalContainer():
     df_hemofil = _filter_hemofil(_df_lots)
     df_recombinant = _filter_recombinant(_df_lots)
     df_rixubis = _filter_rixubis(_df_lots)
+    df_bds = _filter_bds(_df_lots)
 
-    alllots = _return_lot_values_from(pd.concat([df_advate, df_vonvendi, df_hemofil, df_recombinant, df_rixubis], ignore_index=True))
+    alllots = _return_lot_values_from(pd.concat([df_advate, df_vonvendi, df_hemofil, df_recombinant, df_rixubis, df_bds], ignore_index=True))
     advate = _return_lot_values_from(df_advate)
     vonvendi = _return_lot_values_from(df_vonvendi)
     hemofil = _return_lot_values_from(df_hemofil)
     recombinant = _return_lot_values_from(df_recombinant)
     rixubis = _return_lot_values_from(df_rixubis)
+    bds = _return_lot_values_from(df_bds)
 
 
 class SampleResults():

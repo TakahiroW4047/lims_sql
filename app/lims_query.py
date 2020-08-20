@@ -35,6 +35,14 @@ def query_final_container_lots():
                 (lot_number LIKE 'TRA_____A' OR lot_number LIKE 'TRA_____') OR
                 (lot_number LIKE 'TNA_____A' OR lot_number LIKE 'TNA_____')
             )
+            OR 
+            (
+                (material_name='RAHF BDS' AND material_type='CELL_CULTURE') OR
+                (material_name='RAHF_PFM_BDS' AND
+                    (material_type='CELL_CULTURE' OR material_type='CELL_CULTURE1')
+                ) OR
+                (material_name='BAX 855' AND material_type='BULK MANUFACTURING')
+            )
             AND date_in > to_date('01-JAN-17', 'DD-MON-YY')
     """
 
