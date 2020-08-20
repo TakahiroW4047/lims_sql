@@ -35,7 +35,7 @@ def query_final_container_lots():
                 (lot_number LIKE 'TRA_____A' OR lot_number LIKE 'TRA_____') OR
                 (lot_number LIKE 'TNA_____A' OR lot_number LIKE 'TNA_____')
             )
-            AND date_in > to_date('01-JAN-19', 'DD-MON-YY')
+            AND date_in > to_date('01-JAN-17', 'DD-MON-YY')
     """
 
 def query_test_start_and_completion_time(substitution):
@@ -167,6 +167,8 @@ def test_query_test_start_and_completion_time():
         ) results
     ON nai_workspace.task_id = results.task_id
     """
+
+    
 def test_query_sample_receipt_and_review_dates():
     return f"""
     SELECT 
