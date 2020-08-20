@@ -20,7 +20,7 @@ from lims_query import (
     test_query_sample_receipt_and_review_dates,
 )
 
-config.setup(environment='PROD')
+# config.setup(environment='PROD')
 
 def main():
     while True:
