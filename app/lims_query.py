@@ -17,8 +17,8 @@
 #             AND date_in > to_date('01-JAN-17', 'DD-MON-YY')
 #     """
 
-def query_final_container_lots():
-    return """
+def query_final_container_lots(cutoff_date):
+    return f"""
         SELECT
             lot_id,
             lot_number,
@@ -43,7 +43,7 @@ def query_final_container_lots():
                 ) OR
                 (material_name='BAX 855' AND material_type='BULK MANUFACTURING')
             )
-            AND date_in > to_date('01-JAN-17', 'DD-MON-YY')
+            AND date_in > to_date('{cutoff_date}', 'DD-MON-YY')
     """
 
 def query_test_start_and_completion_time(substitution):

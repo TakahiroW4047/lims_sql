@@ -7,7 +7,7 @@ import psycopg2
 import pytz
 import time
 
-from datetime import datetime
+from datetime import datetime, timedelta
 from sqlalchemy import create_engine
 from sqlalchemy.types import Integer, Text, String, DateTime, BigInteger
 
@@ -23,10 +23,11 @@ config.setup(environment='PROD')
 def main():
     # while True:
     start_time = datetime.now()
-    dispo  = DispositionHistory().result
+
+    dispo  = DispositionHistory().result    # Run time 7min 55sec
     DbWriteDispoHistory(dispo, table_name='dispo_history')
 
-    result = SampleResults().result
+    result = SampleResults().result # Run time 4min
     DbWriteSampleResult(result, table_name='sample_results')
 
     update_date = pd.DataFrame({"update_date": [local_datetime()]})
@@ -43,7 +44,8 @@ def local_datetime():
 def datetime_utc_to_local(dt):
     date = dt.replace(tzinfo=pytz.UTC)
     date = date.astimezone(pytz.timezone("US/Pacific"))
-    return date
+    date = datetime.strftime(date, "%d%b%y %H:%M")
+    return str(date).upper()
 
 
 class OracleDB:
@@ -93,6 +95,30 @@ class OracleDB:
 
 
 class LotNumberFinalContainer():
+    def __init__(self, cutoff_month_count):
+        _past = datetime.now() - timedelta(days=cutoff_month_count*31)
+        _cutoffdate = datetime.strftime(_past, "%d-%b-%y")
+
+        _oracle = OracleDB()
+        _query = query_final_container_lots(_cutoff_date)
+        _df_lots = _oracle.search(_query)
+
+        df_advate = _filter_advate(_df_lots)
+        df_vonvendi = _filter_vonvendi(_df_lots)
+        df_hemofil = _filter_hemofil(_df_lots)
+        df_recombinant = _filter_recombinant(_df_lots)
+        df_rixubis = _filter_rixubis(_df_lots)
+        df_bds = _filter_bds(_df_lots)
+
+        self.alllots = _return_lot_values_from(pd.concat([df_advate, df_vonvendi, df_hemofil, df_recombinant, df_rixubis, df_bds], ignore_index=True))
+        self.advate = _return_lot_values_from(df_advate)
+        self.vonvendi = _return_lot_values_from(df_vonvendi)
+        self.hemofil = _return_lot_values_from(df_hemofil)
+        self.recombinant = _return_lot_values_from(df_recombinant)
+        self.rixubis = _return_lot_values_from(df_rixubis)
+        self.bds = _return_lot_values_from(df_bds)
+
+
     def _filter_advate(df):
         df = df[df['LOT_NUMBER'].str.startswith('TAA')]
         return df
@@ -146,24 +172,8 @@ class LotNumberFinalContainer():
     def _return_lot_values_from(df):
         return df['LOT_ID'].values
 
-    _oracle = OracleDB()
-    _query = query_final_container_lots()
-    _df_lots = _oracle.search(_query)
 
-    df_advate = _filter_advate(_df_lots)
-    df_vonvendi = _filter_vonvendi(_df_lots)
-    df_hemofil = _filter_hemofil(_df_lots)
-    df_recombinant = _filter_recombinant(_df_lots)
-    df_rixubis = _filter_rixubis(_df_lots)
-    df_bds = _filter_bds(_df_lots)
-
-    alllots = _return_lot_values_from(pd.concat([df_advate, df_vonvendi, df_hemofil, df_recombinant, df_rixubis, df_bds], ignore_index=True))
-    advate = _return_lot_values_from(df_advate)
-    vonvendi = _return_lot_values_from(df_vonvendi)
-    hemofil = _return_lot_values_from(df_hemofil)
-    recombinant = _return_lot_values_from(df_recombinant)
-    rixubis = _return_lot_values_from(df_rixubis)
-    bds = _return_lot_values_from(df_bds)
+    
 
 
 class SampleResults():
@@ -400,10 +410,11 @@ class SampleResults():
         df.loc[:,'REVIEW_DURATION'].astype('timedelta64[h]')
 
 
-class DispositionHistory(LotNumberFinalContainer):
+class DispositionHistory():
     def __init__(self):
         oracle = OracleDB()
-        self._disposition_history(oracle, LotNumberFinalContainer.alllots)
+        samplelots = LotNumberFinalContainer(cutoff_month_count=3)
+        self._disposition_history(oracle, samplelots.alllots)
 
     def _disposition_history(self, oracle, lots):
         string_substitution = oracle.query_string_substitution('object_id', lots)
@@ -587,7 +598,7 @@ class DbWriteUpdateDatetime():
             index=False,
             chunksize=500,
             dtype={
-                "UPDATE_DATETIME": DateTime
+                "UPDATE_DATETIME": Text
             }
         )
 
