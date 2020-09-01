@@ -28,7 +28,7 @@ def main():
         tablename_sample_results = 'sample_results'
         tablename_update_date = 'update_date'
         func_list = [
-            lambda x=cutoff_month, y=tablename_dispo_history: update_disposition_history(x, y),
+            lambda x=cutoff_month, y=tablename_dispo_history: update_disposition_history(cutoff_month_count=x, table_name=y),
             lambda x=tablename_sample_results: update_sample_results(x),
             lambda x=tablename_update_date: update_date(x)
         ]
@@ -50,7 +50,7 @@ def main():
         tablename_sample_results = 'sample_results_3_years'
         tablename_update_date = 'update_date_3_years'
         func_list = [
-            lambda x=cutoff_month, y=tablename_dispo_history: update_disposition_history(x, y),
+            lambda x=cutoff_month, y=tablename_dispo_history: update_disposition_history(cutoff_month_count=x, table_name=y),
             lambda x=tablename_sample_results: update_sample_results(x),
             lambda x=tablename_update_date: update_date(x)
         ]
@@ -68,7 +68,7 @@ def main():
             if internal_time != today:
                 has_ran=False
 
-    def update_disposition_history(cutoff_month_count=3, table_name):
+    def update_disposition_history(cutoff_month_count, table_name):
         dispo  = DispositionHistory(cutoff_month_count).result    # Run time 7min 55sec
         DbWriteDispoHistory(dispo, table_name=table_name)
 
@@ -83,7 +83,8 @@ def main():
     print(datetime.now(), "Task Initiated")
 
     threads = list()
-    func_list = [task_3_month_results, task_3_year_results]
+    # func_list = [task_3_month_results, task_3_year_results]
+    func_list = [task_3_year_results]
 
     for func in func_list:
         thread = threading.Thread(target=func)
