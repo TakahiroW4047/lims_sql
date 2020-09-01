@@ -6,6 +6,7 @@ import pandas as pd
 import psycopg2
 import pytz
 import time
+import threading
 
 from datetime import datetime, timedelta
 from sqlalchemy import create_engine
@@ -21,31 +22,94 @@ from lims_query import (
 config.setup(environment='PROD')
 
 def main():
-    # while True:
-    start_time = datetime.now()
+    def task_3_month_results(): # Run on every hour
+        cutoff_month=3
+        tablename_dispo_history = 'dispo_history'
+        tablename_sample_results = 'sample_results'
+        tablename_update_date = 'update_date'
+        func_list = [
+            lambda x=cutoff_month, y=tablename_dispo_history: update_disposition_history(x, y),
+            lambda x=tablename_sample_results: update_sample_results(x),
+            lambda x=tablename_update_date: update_date(x)
+        ]
 
-    dispo  = DispositionHistory().result    # Run time 7min 55sec
-    DbWriteDispoHistory(dispo, table_name='dispo_history')
+        has_ran = False
+        while True:
+            time.sleep(1)
+            if local_datetime().minute == 45 and has_ran==False:
+                print(local_datetime(), ": On the hour")
+                for func in func_list:
+                    func()
+                has_ran=True
+            if local_datetime().minute != 45:
+                has_ran=False
 
-    result = SampleResults().result # Run time 4min
-    DbWriteSampleResult(result, table_name='sample_results')
+    def task_3_year_results():  # Run once a day at midnight
+        cutoff_month=36
+        tablename_dispo_history = 'dispo_history_3_years'
+        tablename_sample_results = 'sample_results_3_years'
+        tablename_update_date = 'update_date_3_years'
+        func_list = [
+            lambda x=cutoff_month, y=tablename_dispo_history: update_disposition_history(x, y),
+            lambda x=tablename_sample_results: update_sample_results(x),
+            lambda x=tablename_update_date: update_date(x)
+        ]
 
-    update_date = pd.DataFrame({"update_date": [local_datetime()]})
-    DbWriteUpdateDatetime(update_date, table_name='update_date')
-    print("Instance Duration: ", datetime.now() - start_time)
-        # time.sleep(600)
+        has_ran = False
+        internal_time = local_datetime().day
+        while True:
+            time.sleep(10)
+            today = local_datetime().day
+            if internal_time == today and has_ran==False:
+                print(local_datetime(), ": Once every day at midnight")
+                for func in func_list:
+                    func()
+                has_ran=True
+            if internal_time != today:
+                has_ran=False
+
+    def update_disposition_history(cutoff_month_count=3, table_name):
+        dispo  = DispositionHistory(cutoff_month_count).result    # Run time 7min 55sec
+        DbWriteDispoHistory(dispo, table_name=table_name)
+
+    def update_sample_results(table_name):
+        result = SampleResults().result # Run time 4min
+        DbWriteSampleResult(result, table_name=table_name)
+
+    def update_date(table_name):
+        update_date = pd.DataFrame({"update_date": [local_datetime_string()]})
+        DbWriteUpdateDatetime(update_date, table_name=table_name)
     
+    print(datetime.now(), "Task Initiated")
+
+    threads = list()
+    func_list = [task_3_month_results, task_3_year_results]
+
+    for func in func_list:
+        thread = threading.Thread(target=func)
+        threads.append(thread)
+        thread.start()
+
+    for thread in threads:
+        thread.join()
+
     return None
 
 def local_datetime():
     dt = datetime.utcnow()
     return datetime_utc_to_local(dt)
 
+def local_datetime_string():
+    dt = datetime.utcnow()
+    dt_string = str(
+        datetime.strftime(dt, "%d%b%y %H:%M")
+        ).upper
+    return dt_string
+
 def datetime_utc_to_local(dt):
     date = dt.replace(tzinfo=pytz.UTC)
     date = date.astimezone(pytz.timezone("US/Pacific"))
-    date = datetime.strftime(date, "%d%b%y %H:%M")
-    return str(date).upper()
+    return date
 
 
 class OracleDB:
@@ -171,9 +235,6 @@ class LotNumberFinalContainer():
 
     def _return_lot_values_from(df):
         return df['LOT_ID'].values
-
-
-    
 
 
 class SampleResults():
@@ -411,9 +472,9 @@ class SampleResults():
 
 
 class DispositionHistory():
-    def __init__(self):
+    def __init__(self, cutoff_month_count):
         oracle = OracleDB()
-        samplelots = LotNumberFinalContainer(cutoff_month_count=3)
+        samplelots = LotNumberFinalContainer(cutoff_month_count)
         self._disposition_history(oracle, samplelots.alllots)
 
     def _disposition_history(self, oracle, lots):
