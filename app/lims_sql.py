@@ -25,25 +25,6 @@ from lims_query import (
 config.setup(environment='PROD')
 
 def main():
-<<<<<<< HEAD
-    while True:
-        # start_time_1 = datetime.now()
-        dispo  = DispositionHistory().result
-        # print("Lot Query Duration: ", datetime.now() - start_time_1)
-        DbWriteDispoHistory(dispo, table_name='dispo_history')
-
-        # start_time_2 = datetime.now()
-        result = SampleResults().result
-        # print("Sample Result Query Duration: ", datetime.now() - start_time_2)
-        DbWriteSampleResult(result, table_name='sample_results')
-
-        # result_test = TestSampleResults().result
-
-        update_date = pd.DataFrame({"update_date": [local_datetime()]})
-        DbWriteUpdateDatetime(update_date, table_name='update_date')
-        # print("Total Instance Duration: ", datetime.now() - start_time_1)
-        time.sleep(600)
-=======
     def task_3_month_results(): # Run on every hour
         cutoff_month=3
         tablename_dispo_history = 'dispo_history'
@@ -105,7 +86,6 @@ def main():
     def update_date(table_name):
         update_date = pd.DataFrame({"update_date": [local_datetime_string()]})
         DbWriteUpdateDatetime(update_date, table_name=table_name)
->>>>>>> 5fea4a1f78279ca346b786f84c85e2a41a36832d
     
     logging.basicConfig(filename='log/lims_sql.log', format='%(levelname)s: %(message)s', level=logging.DEBUG)
     logging.info(local_datetime_string() + '- App Initiated')
@@ -503,69 +483,8 @@ class SampleResults():
         df.loc[:,'REVIEW_DURATION'].astype('timedelta64[h]')
 
 
-<<<<<<< HEAD
-class TestSampleResults(SampleResults):
-    def __init__(self):
-        oracle = OracleDB()
-        postgres = PostgresDB()
-        self.sample_results(oracle)
-        
-
-    def sample_results(self, oracle):
-        query = test_query_test_start_and_completion_time()
-        df_test_completion = oracle.search(query) 
-
-        query = test_query_sample_receipt_and_review_dates()
-        df_receipt_review_raw = oracle.search(query)
-
-        start_time = datetime.now()
-        df_receipt_review = (
-            df_receipt_review_raw
-            .pipe(self.remove_duplicates)
-            .pipe(self.pivot_table)
-        )
-        
-        df_merge = df_test_completion.merge(df_receipt_review, on='TASK_ID', how='outer')
-        column_order = [
-                'LOT_NUMBER',
-                'MATERIAL_NAME',
-                'MATERIAL_TYPE',
-                'LOT_ID',
-                'SUBMISSION_ID',
-                'SAMPLE_ID',
-                'WORKLIST_ID',
-                'TASK_ID',
-                'OPERATION',
-                'METHOD_DATAGROUP',
-                'USERSTAMP',
-                'STATUS',
-                'CONDITION',
-                'RECEIVED',
-                'REJECTED',
-                'WORKLIST_START',
-                'TEST_COMPLETED',
-                'APPROVED',
-        ]
-        df_merge = df_merge[column_order]
-        lot_ids = df_merge['LOT_ID'].drop_duplicates().values
-        self.populate_online_dates_neuchatel(df_merge, lot_ids)
-        self.populate_online_dates_other(df_merge, lot_ids)
-        self.calculate_stagnation_duration(df_merge)
-        self.calculate_test_duration(df_merge)
-        self.calculate_review_duration(df_merge)
-
-        # print(df_merge)
-        self.result = df_merge
-        print('Test pandas data wrangling duration: ', datetime.now() - start_time)
-
-
-
-class DispositionHistory(LotNumberFinalContainer):
-    def __init__(self):
-=======
 class DispositionHistory():
     def __init__(self, cutoff_month_count):
->>>>>>> 5fea4a1f78279ca346b786f84c85e2a41a36832d
         oracle = OracleDB()
         samplelots = LotNumberFinalContainer(cutoff_month_count)
         self._disposition_history(oracle, samplelots.alllots)
