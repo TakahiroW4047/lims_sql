@@ -290,3 +290,22 @@ def query_lot_status(substitute):
     ORDER BY
         sqa_lots.lot_number DESC
     """
+
+def query_operation_sop():
+    return """
+    SELECT DISTINCT
+        operation,
+        b.text_value
+    FROM
+        nai_tasks,
+        table(nai_tasks.attributes) b
+    WHERE
+        nai_tasks.timestamp > to_date('01-AUG-18', 'DD-MON-YY')
+        AND (
+            b.text_value LIKE 'TO%'
+            OR b.text_value LIKE 'NE%'
+            OR b.text_value LIKE 'LA%'
+        )
+        AND operation IS NOT NULL
+    ORDER BY operation;
+    """

@@ -247,8 +247,6 @@ class LotNumberFinalContainer():
         return df['LOT_ID'].values
 
 
-
-
 class SampleResults():
     def __init__(self):
         oracle = OracleDB()
@@ -302,8 +300,6 @@ class SampleResults():
         # print(df_merge)
         self.result = df_merge
     
-    
-
     def remove_duplicates(self, df):
         df_approved = df[df['FINAL_STATE']=='APPROVED'].copy()
         df_online   = df[df['FINAL_STATE']=='ONLINE'].copy()
