@@ -1,5 +1,6 @@
 import config
 import cx_Oracle
+import logging
 import numpy as np
 import os
 import pandas as pd
@@ -36,11 +37,13 @@ def main():
         has_ran = False
         while True:
             time.sleep(1)
+            start_time = datetime.now()
             if local_datetime().minute == 45 and has_ran==False:
-                print(local_datetime(), ": On the hour")
+                logging.info(local_datetime_string() + '- Task Initiated, 3 month results')
                 for func in func_list:
                     func()
                 has_ran=True
+                logging.info(local_datetime_string() + '- Task Completed, 3 month results, duration=' + str(datetime.now()-start_time))
             if local_datetime().minute != 45:
                 has_ran=False
 
@@ -60,11 +63,13 @@ def main():
         while True:
             time.sleep(10)
             today = local_datetime().day
+            start_time = datetime.now()
             if internal_time == today and has_ran==False:
-                print(local_datetime(), ": Once every day at midnight")
+                logging.info(local_datetime_string() + '- Task Initiated, 3 year results')
                 for func in func_list:
                     func()
                 has_ran=True
+                logging.info(local_datetime_string() + '- Task Completed, 3 year results, duration=' + str(datetime.now()-start_time))
             if internal_time != today:
                 has_ran=False
 
@@ -80,11 +85,13 @@ def main():
         update_date = pd.DataFrame({"update_date": [local_datetime_string()]})
         DbWriteUpdateDatetime(update_date, table_name=table_name)
     
-    print(datetime.now(), "Task Initiated")
+    logging.basicConfig(filename='log/lims_sql.log', format='%(levelname)s: %(message)s', level=logging.DEBUG)
+    logging.info(local_datetime_string() + '- Task Initiated')
 
     threads = list()
     # func_list = [task_3_month_results, task_3_year_results]
-    func_list = [task_3_year_results]
+    func_list = [task_3_month_results]
+    # func_list = [lambda: print('hello')]
 
     for func in func_list:
         thread = threading.Thread(target=func)
@@ -101,10 +108,10 @@ def local_datetime():
     return datetime_utc_to_local(dt)
 
 def local_datetime_string():
-    dt = datetime.utcnow()
+    dt = datetime_utc_to_local(datetime.utcnow())
     dt_string = str(
         datetime.strftime(dt, "%d%b%y %H:%M")
-        ).upper
+        ).upper()
     return dt_string
 
 def datetime_utc_to_local(dt):
@@ -162,33 +169,33 @@ class OracleDB:
 class LotNumberFinalContainer():
     def __init__(self, cutoff_month_count):
         _past = datetime.now() - timedelta(days=cutoff_month_count*31)
-        _cutoffdate = datetime.strftime(_past, "%d-%b-%y")
+        _cutoff_date = datetime.strftime(_past, "%d-%b-%y")
 
         _oracle = OracleDB()
         _query = query_final_container_lots(_cutoff_date)
         _df_lots = _oracle.search(_query)
 
-        df_advate = _filter_advate(_df_lots)
-        df_vonvendi = _filter_vonvendi(_df_lots)
-        df_hemofil = _filter_hemofil(_df_lots)
-        df_recombinant = _filter_recombinant(_df_lots)
-        df_rixubis = _filter_rixubis(_df_lots)
-        df_bds = _filter_bds(_df_lots)
+        df_advate = self._filter_advate(_df_lots)
+        df_vonvendi = self._filter_vonvendi(_df_lots)
+        df_hemofil = self._filter_hemofil(_df_lots)
+        df_recombinant = self._filter_recombinant(_df_lots)
+        df_rixubis = self._filter_rixubis(_df_lots)
+        df_bds = self._filter_bds(_df_lots)
 
-        self.alllots = _return_lot_values_from(pd.concat([df_advate, df_vonvendi, df_hemofil, df_recombinant, df_rixubis, df_bds], ignore_index=True))
-        self.advate = _return_lot_values_from(df_advate)
-        self.vonvendi = _return_lot_values_from(df_vonvendi)
-        self.hemofil = _return_lot_values_from(df_hemofil)
-        self.recombinant = _return_lot_values_from(df_recombinant)
-        self.rixubis = _return_lot_values_from(df_rixubis)
-        self.bds = _return_lot_values_from(df_bds)
+        self.alllots = self._return_lot_values_from(pd.concat([df_advate, df_vonvendi, df_hemofil, df_recombinant, df_rixubis, df_bds], ignore_index=True))
+        self.advate = self._return_lot_values_from(df_advate)
+        self.vonvendi = self._return_lot_values_from(df_vonvendi)
+        self.hemofil = self._return_lot_values_from(df_hemofil)
+        self.recombinant = self._return_lot_values_from(df_recombinant)
+        self.rixubis = self._return_lot_values_from(df_rixubis)
+        self.bds = self._return_lot_values_from(df_bds)
 
 
-    def _filter_advate(df):
+    def _filter_advate(self, df):
         df = df[df['LOT_NUMBER'].str.startswith('TAA')]
         return df
 
-    def _filter_vonvendi(df):
+    def _filter_vonvendi(self, df):
         boolean = (
             df['LOT_NUMBER'].str.startswith('TVA') &
             df['MATERIAL_NAME'].isin(['RVWF']) & 
@@ -198,7 +205,7 @@ class LotNumberFinalContainer():
         )
         return df[boolean]
 
-    def _filter_hemofil(df):
+    def _filter_hemofil(self, df):
         boolean = (
             df['LOT_NUMBER'].str.startswith('THA') &
             (
@@ -208,7 +215,7 @@ class LotNumberFinalContainer():
         )
         return df[boolean]
 
-    def _filter_recombinant(df):
+    def _filter_recombinant(self, df):
         boolean = (
             df['LOT_NUMBER'].str.startswith('TRA') &
             (
@@ -218,7 +225,7 @@ class LotNumberFinalContainer():
         )
         return df[boolean]
 
-    def _filter_rixubis(df):
+    def _filter_rixubis(self, df):
         boolean = (
             df['LOT_NUMBER'].str.startswith('TNA') &
             (
@@ -228,13 +235,13 @@ class LotNumberFinalContainer():
         )
         return df[boolean]
 
-    def _filter_bds(df):
+    def _filter_bds(self, df):
         boolean = (
             df['MATERIAL_NAME'].isin(['RAHF BDS', 'RAHF_PFM_BDS', 'BAX 855'])
         )
         return df[boolean]
 
-    def _return_lot_values_from(df):
+    def _return_lot_values_from(self, df):
         return df['LOT_ID'].values
 
 
