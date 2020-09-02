@@ -3,4 +3,4 @@
 **/config.py
 /env
 .env*
-lims_sql.log
+log/lims_sql.log
