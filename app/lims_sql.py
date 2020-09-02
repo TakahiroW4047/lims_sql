@@ -86,7 +86,7 @@ def main():
         DbWriteUpdateDatetime(update_date, table_name=table_name)
     
     logging.basicConfig(filename='log/lims_sql.log', format='%(levelname)s: %(message)s', level=logging.DEBUG)
-    logging.info(local_datetime_string() + '- Task Initiated')
+    logging.info(local_datetime_string() + '- App Initiated')
 
     threads = list()
     # func_list = [task_3_month_results, task_3_year_results]
