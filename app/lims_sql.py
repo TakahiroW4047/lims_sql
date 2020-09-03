@@ -40,13 +40,13 @@ def main():
         while True:
             time.sleep(1)
             start_time = datetime.now()
-            if local_datetime().minute == 45 and has_ran==False:
+            if local_datetime().minute == 40 and has_ran==False:
                 logging.info(local_datetime_string() + '- Task Initiated, 3 month results')
                 for func in func_list:
                     func()
                 has_ran=True
                 logging.info(local_datetime_string() + '- Task Completed, 3 month results, duration=' + str(datetime.now()-start_time))
-            if local_datetime().minute != 45:
+            if local_datetime().minute != 40:
                 has_ran=False
 
     def task_3_year_results():  # Run once a day at midnight

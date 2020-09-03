@@ -7,5 +7,5 @@ services:
       dockerfile: dockerfile
     env_file:
       - ./.env.prod
-    volumes:
-      - ./log:./log
+    # volumes:
+    #   - /home/agile/lims_sql/app/log:/usr/src/app/log
