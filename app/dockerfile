@@ -22,6 +22,7 @@ RUN mkdir /usr/src/app/log
 # install psycopg2 dependencies
 RUN apt-get update && apt-get install
 RUN apt-get install libpq-dev
+RUN apt-get install nano
 
 # install cx_Oracle dependencies
 RUN apt-get install libaio1
