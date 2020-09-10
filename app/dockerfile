@@ -16,8 +16,8 @@ ENV PYTHONBUFFERED 1
 # copy project
 COPY . /usr/src/app
 
-# make log directory
-RUN mkdir /usr/src/app/log
+# make log directory and file
+RUN echo > log/lims_sql.log
 
 # install psycopg2 dependencies
 RUN apt-get update && apt-get install
@@ -38,6 +38,7 @@ RUN pip install --no-cache-dir -r requirements.txt
 # chown all the files to the app user
 RUN chown -R app:app /usr/src/app
 RUN chmod +x /usr/src/app/entrypoint.sh
+RUN chmod 777 /usr/src/app/log/lims_sql.log
 
 # change to the app user
 USER app

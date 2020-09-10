@@ -23,7 +23,7 @@ from lims_query import (
     test_query_sample_receipt_and_review_dates,
 )
 
-config.setup(environment='PROD')
+# config.setup(environment='PROD')
 
 def main():
     def task_3_month_results(): # Run on every hour
@@ -33,7 +33,7 @@ def main():
         tablename_update_date = 'update_date'
         func_list = [
             lambda x=cutoff_month, y=tablename_dispo_history: update_disposition_history(cutoff_month_count=x, table_name=y),
-            lambda x=tablename_sample_results: update_sample_results(x),
+            lambda x=tablename_dispo_history, y=tablename_sample_results, : update_sample_results(dispo_table_name=x, result_table_name=y),
             lambda x=tablename_update_date: update_date(x)
         ]
 
@@ -41,26 +41,26 @@ def main():
         while True:
             time.sleep(1)
             start_time = datetime.now()
-            if local_datetime().minute == 45 and has_ran==False:
+            trigger = 55
+            if local_datetime().minute == trigger and has_ran==False:
                 logging.info(local_datetime_string() + '- Task Initiated, 3 month results')
                 for func in func_list:
                     func()
                 has_ran=True
                 logging.info(local_datetime_string() + '- Task Completed, 3 month results, duration=' + str(datetime.now()-start_time))
-            if local_datetime().minute != 45:
+            if local_datetime().minute != trigger:
                 has_ran=False
 
     def task_3_year_results():  # Run once a day at midnight
-        cutoff_month=36
+        cutoff_month=55
         tablename_dispo_history = 'dispo_history_3_years'
         tablename_sample_results = 'sample_results_3_years'
         tablename_update_date = 'update_date_3_years'
         func_list = [
             update_operation_sop,
             lambda x=cutoff_month, y=tablename_dispo_history: update_disposition_history(cutoff_month_count=x, table_name=y),
-            lambda x=tablename_sample_results: update_sample_results(x),
-            lambda x=tablename_update_date: update_date(x),
-            
+            lambda x=tablename_dispo_history, y=tablename_sample_results, : update_sample_results(dispo_table_name=x, result_table_name=y),
+            lambda x=tablename_update_date: update_date(x)
         ]
 
         has_ran = False
@@ -82,9 +82,9 @@ def main():
         dispo  = DispositionHistory(cutoff_month_count).result    # Run time 7min 55sec
         DbWriteDispoHistory(dispo, table_name=table_name)
 
-    def update_sample_results(table_name):
-        result = SampleResults().result # Run time 4min
-        DbWriteSampleResult(result, table_name=table_name)
+    def update_sample_results(dispo_table_name, result_table_name):
+        result = SampleResults(table_name=dispo_table_name).result # Run time 4min
+        DbWriteSampleResult(result, table_name=result_table_name)
 
     def update_operation_sop():
         result = OperationSOPCombinations().result
@@ -98,8 +98,8 @@ def main():
     logging.info(local_datetime_string() + '- App Initiated')
 
     threads = list()
-    # func_list = [task_3_month_results, task_3_year_results]
-    func_list = [task_3_month_results]
+    func_list = [task_3_month_results, task_3_year_results]
+    # func_list = [task_3_month_results]
     # func_list = [lambda: print('hello')]
 
     for func in func_list:
@@ -178,7 +178,7 @@ class OracleDB:
 class LotNumberFinalContainer():
     def __init__(self, cutoff_month_count):
         _past = datetime.now() - timedelta(days=cutoff_month_count*31)
-        _cutoff_date = datetime.strftime(_past, "%d-%b-%y")
+        _cutoff_date = datetime.strftime(_past, "%d-%b-%y").upper()
 
         _oracle = OracleDB()
         _query = query_final_container_lots(_cutoff_date)
@@ -255,10 +255,10 @@ class LotNumberFinalContainer():
 
 
 class SampleResults():
-    def __init__(self):
+    def __init__(self, table_name):
         oracle = OracleDB()
         postgres = PostgresDB()
-        lots = postgres.read(table_name='dispo_history')['LOT_ID'].values
+        lots = postgres.read(table_name=table_name)['LOT_ID'].values
         self.sample_results(oracle, lots)
 
     def sample_results(self, oracle, lots):
