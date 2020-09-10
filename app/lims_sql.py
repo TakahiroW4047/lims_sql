@@ -51,7 +51,7 @@ def main():
                 has_ran=False
 
     def task_3_year_results():  # Run once a day at midnight
-        cutoff_month=55
+        cutoff_month=36
         tablename_dispo_history = 'dispo_history_3_years'
         tablename_sample_results = 'sample_results_3_years'
         tablename_update_date = 'update_date_3_years'
