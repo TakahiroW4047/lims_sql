@@ -28,6 +28,7 @@ def query_final_container_lots(cutoff_date):
             due_date,
             condition
         FROM sqa_lots WHERE
+        (
             (
                 (lot_number LIKE 'TAA_____A' OR lot_number LIKE 'TAA_____') OR
                 (lot_number LIKE 'TVA_____A' OR lot_number LIKE 'TVA_____') OR
@@ -43,8 +44,9 @@ def query_final_container_lots(cutoff_date):
                 ) OR
                 (material_name='BAX 855' AND material_type='BULK MANUFACTURING')
             )
-            AND date_in > to_date('{cutoff_date}', 'DD-MON-YY')
+        ) AND date_in > to_date('{cutoff_date}', 'DD-MON-YY')
     """
+
 
 def query_test_start_and_completion_time(substitution):
     return f"""

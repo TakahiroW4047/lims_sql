@@ -22,7 +22,7 @@ from lims_query import (
     test_query_sample_receipt_and_review_dates,
 )
 
-config.setup(environment='PROD')
+# config.setup(environment='PROD')
 
 def main():
     def task_3_month_results(): # Run on every hour
@@ -40,13 +40,14 @@ def main():
         while True:
             time.sleep(1)
             start_time = datetime.now()
-            if local_datetime().minute == 40 and has_ran==False:
+            trigger = 55
+            if local_datetime().minute == trigger and has_ran==False:
                 logging.info(local_datetime_string() + '- Task Initiated, 3 month results')
                 for func in func_list:
                     func()
                 has_ran=True
                 logging.info(local_datetime_string() + '- Task Completed, 3 month results, duration=' + str(datetime.now()-start_time))
-            if local_datetime().minute != 40:
+            if local_datetime().minute != trigger:
                 has_ran=False
 
     def task_3_year_results():  # Run once a day at midnight
@@ -171,7 +172,7 @@ class OracleDB:
 class LotNumberFinalContainer():
     def __init__(self, cutoff_month_count):
         _past = datetime.now() - timedelta(days=cutoff_month_count*31)
-        _cutoff_date = datetime.strftime(_past, "%d-%b-%y")
+        _cutoff_date = datetime.strftime(_past, "%d-%b-%y").upper()
 
         _oracle = OracleDB()
         _query = query_final_container_lots(_cutoff_date)
