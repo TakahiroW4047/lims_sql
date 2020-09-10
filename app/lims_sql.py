@@ -32,7 +32,7 @@ def main():
         tablename_update_date = 'update_date'
         func_list = [
             lambda x=cutoff_month, y=tablename_dispo_history: update_disposition_history(cutoff_month_count=x, table_name=y),
-            lambda x=tablename_sample_results: update_sample_results(x),
+            lambda x=tablename_dispo_history, y=tablename_sample_results, : update_sample_results(dispo_table_name=x, result_table_name=y),
             lambda x=tablename_update_date: update_date(x)
         ]
 
@@ -51,13 +51,13 @@ def main():
                 has_ran=False
 
     def task_3_year_results():  # Run once a day at midnight
-        cutoff_month=36
+        cutoff_month=55
         tablename_dispo_history = 'dispo_history_3_years'
         tablename_sample_results = 'sample_results_3_years'
         tablename_update_date = 'update_date_3_years'
         func_list = [
             lambda x=cutoff_month, y=tablename_dispo_history: update_disposition_history(cutoff_month_count=x, table_name=y),
-            lambda x=tablename_sample_results: update_sample_results(x),
+            lambda x=tablename_dispo_history, y=tablename_sample_results, : update_sample_results(dispo_table_name=x, result_table_name=y),
             lambda x=tablename_update_date: update_date(x)
         ]
 
@@ -80,9 +80,9 @@ def main():
         dispo  = DispositionHistory(cutoff_month_count).result    # Run time 7min 55sec
         DbWriteDispoHistory(dispo, table_name=table_name)
 
-    def update_sample_results(table_name):
-        result = SampleResults().result # Run time 4min
-        DbWriteSampleResult(result, table_name=table_name)
+    def update_sample_results(dispo_table_name, result_table_name):
+        result = SampleResults(table_name=dispo_table_name).result # Run time 4min
+        DbWriteSampleResult(result, table_name=result_table_name)
 
     def update_date(table_name):
         update_date = pd.DataFrame({"update_date": [local_datetime_string()]})
@@ -92,8 +92,8 @@ def main():
     logging.info(local_datetime_string() + '- App Initiated')
 
     threads = list()
-    # func_list = [task_3_month_results, task_3_year_results]
-    func_list = [task_3_month_results]
+    func_list = [task_3_month_results, task_3_year_results]
+    # func_list = [task_3_month_results]
     # func_list = [lambda: print('hello')]
 
     for func in func_list:
@@ -251,10 +251,10 @@ class LotNumberFinalContainer():
 
 
 class SampleResults():
-    def __init__(self):
+    def __init__(self, table_name):
         oracle = OracleDB()
         postgres = PostgresDB()
-        lots = postgres.read(table_name='dispo_history')['LOT_ID'].values
+        lots = postgres.read(table_name=table_name)['LOT_ID'].values
         self.sample_results(oracle, lots)
 
     def sample_results(self, oracle, lots):
