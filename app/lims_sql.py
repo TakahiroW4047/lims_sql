@@ -18,6 +18,7 @@ from lims_query import (
     query_test_start_and_completion_time,
     query_sample_receipt_and_review_dates,
     query_lot_status,
+    query_operation_sop,
     test_query_test_start_and_completion_time,
     test_query_sample_receipt_and_review_dates,
 )
@@ -55,9 +56,11 @@ def main():
         tablename_sample_results = 'sample_results_3_years'
         tablename_update_date = 'update_date_3_years'
         func_list = [
+            update_operation_sop,
             lambda x=cutoff_month, y=tablename_dispo_history: update_disposition_history(cutoff_month_count=x, table_name=y),
             lambda x=tablename_sample_results: update_sample_results(x),
-            lambda x=tablename_update_date: update_date(x)
+            lambda x=tablename_update_date: update_date(x),
+            
         ]
 
         has_ran = False
@@ -82,6 +85,10 @@ def main():
     def update_sample_results(table_name):
         result = SampleResults().result # Run time 4min
         DbWriteSampleResult(result, table_name=table_name)
+
+    def update_operation_sop():
+        result = OperationSOPCombinations().result
+        DBWriteOperationSOP(result)
 
     def update_date(table_name):
         update_date = pd.DataFrame({"update_date": [local_datetime_string()]})
@@ -582,6 +589,13 @@ class DispositionHistory():
         return df.drop_duplicates(subset='LOT_ID')
 
 
+class OperationSOPCombinations():
+    def __init__(self):
+        oracle = OracleDB()
+        query = query_operation_sop()
+        self.result = oracle.search(query)
+
+
 class PostgresDB:
     def __init__(self):
         _db_uri = os.getenv('SQLALCHEMY_DB_URI')
@@ -671,6 +685,25 @@ class DbWriteUpdateDatetime():
             }
         )
 
+
+class DbWriteOperationSOP():
+    def __init__(self, df):
+        self.postgres = PostgresDB()
+        self.table_name = 'operation_sop'
+        self._db_write(df)
+
+    def _db_write(self, df):
+        df.to_sql(
+            self.table_name,
+            self.postgres.engine,
+            # if_exists='replace',
+            index=False,
+            chunksize=500,
+            dtype={
+                "OPERATION": Text,
+                "SOP": Text
+            }
+        )
 
 if __name__ == "__main__":
     main()
