@@ -62,19 +62,20 @@ def main():
         ]
 
         has_ran = False
-        internal_time = local_datetime().day
+        internal_day = local_datetime().day
         while True:
             time.sleep(10)
             today = local_datetime().day
             start_time = datetime.now()
-            if internal_time == today and has_ran==False:
+            if internal_day == today and has_ran==False:
                 logging.info(local_datetime_string() + '- Task Initiated, 3 year results')
                 for func in func_list:
                     func()
                 has_ran=True
                 logging.info(local_datetime_string() + '- Task Completed, 3 year results, duration=' + str(datetime.now()-start_time))
-            if internal_time != today:
+            if internal_day != today:
                 has_ran=False
+                internal_day = today
 
     def update_disposition_history(cutoff_month_count, table_name):
         dispo  = DispositionHistory(cutoff_month_count).result    # Run time 7min 55sec
