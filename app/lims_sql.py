@@ -19,11 +19,12 @@ from lims_query import (
     query_sample_receipt_and_review_dates,
     query_lot_status,
     query_operation_sop,
+    query_update_dispo_received_date,
     test_query_test_start_and_completion_time,
     test_query_sample_receipt_and_review_dates,
 )
 
-# config.setup(environment='PROD')
+config.setup(environment='PROD')
 
 def main():
     def task_3_month_results(): # Run on every hour
@@ -34,6 +35,7 @@ def main():
         func_list = [
             lambda x=cutoff_month, y=tablename_dispo_history: update_disposition_history(cutoff_month_count=x, table_name=y),
             lambda x=tablename_dispo_history, y=tablename_sample_results, : update_sample_results(dispo_table_name=x, result_table_name=y),
+            lambda x=tablename_dispo_history, y=tablename_sample_results: update_disposition_history_received(dispo_table_name=x, result_table_name=y),
             lambda x=tablename_update_date: update_date(x)
         ]
 
@@ -52,31 +54,33 @@ def main():
                 has_ran=False
 
     def task_3_year_results():  # Run once a day at midnight
-        cutoff_month=55
+        cutoff_month=36
         tablename_dispo_history = 'dispo_history_3_years'
         tablename_sample_results = 'sample_results_3_years'
         tablename_update_date = 'update_date_3_years'
         func_list = [
             update_operation_sop,
             lambda x=cutoff_month, y=tablename_dispo_history: update_disposition_history(cutoff_month_count=x, table_name=y),
-            lambda x=tablename_dispo_history, y=tablename_sample_results, : update_sample_results(dispo_table_name=x, result_table_name=y),
+            lambda x=tablename_dispo_history, y=tablename_sample_results: update_sample_results(dispo_table_name=x, result_table_name=y),
+            lambda x=tablename_dispo_history, y=tablename_sample_results: update_disposition_history_received(dispo_table_name=x, result_table_name=y),
             lambda x=tablename_update_date: update_date(x)
         ]
 
         has_ran = False
-        internal_time = local_datetime().day
+        internal_day = local_datetime().day
         while True:
-            time.sleep(10)
+            # time.sleep(10)
             today = local_datetime().day
             start_time = datetime.now()
-            if internal_time == today and has_ran==False:
+            if internal_day == today and has_ran==False:
                 logging.info(local_datetime_string() + '- Task Initiated, 3 year results')
                 for func in func_list:
                     func()
                 has_ran=True
                 logging.info(local_datetime_string() + '- Task Completed, 3 year results, duration=' + str(datetime.now()-start_time))
-            if internal_time != today:
+            if internal_day != today:
                 has_ran=False
+                internal_day = today
 
     def update_disposition_history(cutoff_month_count, table_name):
         dispo  = DispositionHistory(cutoff_month_count).result    # Run time 7min 55sec
@@ -89,6 +93,10 @@ def main():
     def update_operation_sop():
         result = OperationSOPCombinations().result
         DBWriteOperationSOP(result)
+        
+    def update_disposition_history_received(dispo_table_name, result_table_name):
+        df_accurate_received_dates = DispositionHistoryReceivedDatesFixed(result_table_name).result
+        DbUpdateDispoHistory(df_accurate_received_dates, table_name=dispo_table_name)
 
     def update_date(table_name):
         update_date = pd.DataFrame({"update_date": [local_datetime_string()]})
@@ -98,8 +106,8 @@ def main():
     logging.info(local_datetime_string() + '- App Initiated')
 
     threads = list()
-    func_list = [task_3_month_results, task_3_year_results]
-    # func_list = [task_3_month_results]
+    # func_list = [task_3_month_results, task_3_year_results]
+    func_list = [task_3_year_results]
     # func_list = [lambda: print('hello')]
 
     for func in func_list:
@@ -594,6 +602,16 @@ class OperationSOPCombinations():
         oracle = OracleDB()
         query = query_operation_sop()
         self.result = oracle.search(query)
+        
+class DispositionHistoryReceivedDatesFixed():
+    def __init__(self, table_name):
+        postgres = PostgresDB()
+        df = postgres.read(table_name=table_name)
+        df_accurate_received_dates = self.find_accurate_received_dates(df)
+        self.result = df_accurate_received_dates
+
+    def find_accurate_received_dates(self, df):
+        return df.groupby('LOT_NUMBER').agg({'RECEIVED':np.min}).reset_index()
 
 
 class PostgresDB:
@@ -665,6 +683,47 @@ class DbWriteDispoHistory():
                 "SUSPECT": DateTime
             }
         )
+
+
+class DbUpdateDispoHistory():
+    def __init__(self, df, table_name):
+        self.postgres = PostgresDB()
+        self.table_name = table_name
+        self.data = ""
+        self.create_update_sql_query_string(df)
+        self.update_query()
+
+
+    def create_update_sql_query_string(self, df):
+        def pull_row_data(row):
+            lot = row['LOT_NUMBER']
+            date = row['RECEIVED']
+            data_string = f"(\'{lot}\', \'{date}\'::timestamp),"
+            self.data += data_string
+            if lot == 'TAA20013A': print('Its here!: ', date)
+            return None
+
+        df.apply(pull_row_data, axis=1)
+        self.data = self.data[:-1]
+        return None
+
+    def update_query(self):
+        conn = psycopg2.connect(
+            host=os.getenv('POSTGRES_DB_HOST'),
+            database=os.getenv('POSTGRES_DB_NAME'),
+            user=os.getenv('POSTGRES_DB_USER'),
+            password=os.getenv('POSTGRES_DB_PASS')
+        )
+        cur = conn.cursor()
+        
+        query = query_update_dispo_received_date(self.table_name, self.data)
+        print(query[:200])
+        cur.execute(query)
+        conn.commit()
+        print('Done!')
+        cur.close()
+        conn.close()
+        
 
 
 class DbWriteUpdateDatetime():

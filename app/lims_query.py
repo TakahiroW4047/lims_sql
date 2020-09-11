@@ -309,5 +309,15 @@ def query_operation_sop():
             OR b.text_value LIKE 'LA%'
         )
         AND operation IS NOT NULL
-    ORDER BY operation;
+    ORDER BY operation
+    """
+
+def query_update_dispo_received_date(table_name, data):
+    return f"""
+        UPDATE {table_name} SET
+            "ACTIVE" = data.new_received_date
+        FROM (VALUES
+            {data}
+        ) AS data(lot_number, new_received_date)
+        WHERE "LOT_NUMBER" = data.lot_number
     """
