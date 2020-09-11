@@ -59,10 +59,10 @@ def main():
         tablename_sample_results = 'sample_results_3_years'
         tablename_update_date = 'update_date_3_years'
         func_list = [
-            update_operation_sop,
-            lambda x=cutoff_month, y=tablename_dispo_history: update_disposition_history(cutoff_month_count=x, table_name=y),
-            lambda x=tablename_dispo_history, y=tablename_sample_results: update_sample_results(dispo_table_name=x, result_table_name=y),
-            lambda x=tablename_dispo_history, y=tablename_sample_results: update_disposition_history_received(dispo_table_name=x, result_table_name=y),
+            lambda x=cutoff_month: update_operation_sop(cutoff_month_count=x),
+            # lambda x=cutoff_month, y=tablename_dispo_history: update_disposition_history(cutoff_month_count=x, table_name=y),
+            # lambda x=tablename_dispo_history, y=tablename_sample_results: update_sample_results(dispo_table_name=x, result_table_name=y),
+            # lambda x=tablename_dispo_history, y=tablename_sample_results: update_disposition_history_received(dispo_table_name=x, result_table_name=y),
             lambda x=tablename_update_date: update_date(x)
         ]
 
@@ -90,9 +90,9 @@ def main():
         result = SampleResults(table_name=dispo_table_name).result # Run time 4min
         DbWriteSampleResult(result, table_name=result_table_name)
 
-    def update_operation_sop():
-        result = OperationSOPCombinations().result
-        DBWriteOperationSOP(result)
+    def update_operation_sop(cutoff_month_count):
+        result = OperationSOPCombinations(cutoff_month_count=cutoff_month_count).result
+        DbWriteOperationSOP(result)
         
     def update_disposition_history_received(dispo_table_name, result_table_name):
         df_accurate_received_dates = DispositionHistoryReceivedDatesFixed(result_table_name).result
@@ -266,8 +266,13 @@ class SampleResults():
     def __init__(self, table_name):
         oracle = OracleDB()
         postgres = PostgresDB()
+
         lots = postgres.read(table_name=table_name)['LOT_ID'].values
-        self.sample_results(oracle, lots)
+        self.result = self.sample_results(oracle, lots)
+
+        df_operation_sops = postgres.read(table_name='operation_sop')
+        self.result = self.merge_operation_sops(df_operation_sops)
+        
 
     def sample_results(self, oracle, lots):
         query_substitute = oracle.query_string_substitution('lot_id', lots)
@@ -313,7 +318,7 @@ class SampleResults():
         self.calculate_review_duration(df_merge)
 
         # print(df_merge)
-        self.result = df_merge
+        return df_merge
     
     def remove_duplicates(self, df):
         df_approved = df[df['FINAL_STATE']=='APPROVED'].copy()
@@ -493,6 +498,30 @@ class SampleResults():
         # Change type to hours
         df.loc[:,'REVIEW_DURATION'].astype('timedelta64[h]')
 
+    def merge_operation_sop(df_operation_sops):
+        df = self.result.merge(df_operation_sops, on='operation', how='left')
+        column_order = [
+                'LOT_NUMBER',
+                'MATERIAL_NAME',
+                'MATERIAL_TYPE',
+                'LOT_ID',
+                'SUBMISSION_ID',
+                'SAMPLE_ID',
+                'WORKLIST_ID',
+                'TASK_ID',
+                'OPERATION',
+                ''
+                'METHOD_DATAGROUP',
+                'USERSTAMP',
+                'STATUS',
+                'CONDITION',
+                'RECEIVED',
+                'REJECTED',
+                'WORKLIST_START',
+                'TEST_COMPLETED',
+                'APPROVED',
+        ]
+        return df
 
 class DispositionHistory():
     def __init__(self, cutoff_month_count):
@@ -598,10 +627,17 @@ class DispositionHistory():
 
 
 class OperationSOPCombinations():
-    def __init__(self):
+    def __init__(self, cutoff_month_count):
         oracle = OracleDB()
-        query = query_operation_sop()
-        self.result = oracle.search(query)
+        _cutoff_date = self.month_to_date_conversion(cutoff_month_count)
+        _query = query_operation_sop(cutoff_date=_cutoff_date)
+        self.result = oracle.search(_query)
+        self.result.columns = ['OPERATION', 'SOP']
+    
+    def month_to_date_conversion(self, cutoff_month_count):
+        _past = datetime.now() - timedelta(days=cutoff_month_count*31)
+        return datetime.strftime(_past, "%d-%b-%y").upper() 
+
         
 class DispositionHistoryReceivedDatesFixed():
     def __init__(self, table_name):
@@ -755,7 +791,7 @@ class DbWriteOperationSOP():
         df.to_sql(
             self.table_name,
             self.postgres.engine,
-            # if_exists='replace',
+            if_exists='replace',
             index=False,
             chunksize=500,
             dtype={

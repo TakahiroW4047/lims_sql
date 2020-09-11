@@ -293,8 +293,8 @@ def query_lot_status(substitute):
         sqa_lots.lot_number DESC
     """
 
-def query_operation_sop():
-    return """
+def query_operation_sop(cutoff_date):
+    return f"""
     SELECT DISTINCT
         operation,
         b.text_value
@@ -302,7 +302,7 @@ def query_operation_sop():
         nai_tasks,
         table(nai_tasks.attributes) b
     WHERE
-        nai_tasks.timestamp > to_date('01-AUG-18', 'DD-MON-YY')
+        nai_tasks.timestamp > to_date('{cutoff_date}', 'DD-MON-YY')
         AND (
             b.text_value LIKE 'TO%'
             OR b.text_value LIKE 'NE%'
