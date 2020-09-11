@@ -292,3 +292,13 @@ def query_lot_status(substitute):
     ORDER BY
         sqa_lots.lot_number DESC
     """
+
+def query_update_dispo_received_date(table_name, data):
+    return f"""
+        UPDATE {table_name} SET
+            "ACTIVE" = data.new_received_date
+        FROM (VALUES
+            {data}
+        ) AS data(lot_number, new_received_date)
+        WHERE "LOT_NUMBER" = data.lot_number
+    """
