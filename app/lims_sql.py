@@ -43,7 +43,7 @@ def main():
         while True:
             time.sleep(1)
             start_time = datetime.now()
-            trigger = 55
+            trigger = 3
             if local_datetime().minute == trigger and has_ran==False:
                 logging.info(local_datetime_string() + '- Task Initiated, 3 month results')
                 for func in func_list:
@@ -107,7 +107,7 @@ def main():
 
     threads = list()
     # func_list = [task_3_month_results, task_3_year_results]
-    func_list = [task_3_year_results]
+    func_list = [task_3_month_results]
     # func_list = [lambda: print('hello')]
 
     for func in func_list:
@@ -254,7 +254,8 @@ class LotNumberFinalContainer():
 
     def _filter_bds(self, df):
         boolean = (
-            df['MATERIAL_NAME'].isin(['RAHF BDS', 'RAHF_PFM_BDS', 'BAX 855'])
+            (df['MATERIAL_NAME'].isin(['RAHF BDS']) & df['MATERIAL_TYPE'].isin(['CELL_CULTURE'])) |
+            (df['MATERIAL_NAME'].isin(['RAHF_PFM_BDS', 'BAX 855']))
         )
         return df[boolean]
 
@@ -498,8 +499,8 @@ class SampleResults():
         # Change type to hours
         df.loc[:,'REVIEW_DURATION'].astype('timedelta64[h]')
 
-    def merge_operation_sop(df_operation_sops):
-        df = self.result.merge(df_operation_sops, on='operation', how='left')
+    def merge_operation_sops(self, df_operation_sops):
+        df = self.result.merge(df_operation_sops, on='OPERATION', how='left')
         column_order = [
                 'LOT_NUMBER',
                 'MATERIAL_NAME',
@@ -510,7 +511,7 @@ class SampleResults():
                 'WORKLIST_ID',
                 'TASK_ID',
                 'OPERATION',
-                ''
+                'SOP',
                 'METHOD_DATAGROUP',
                 'USERSTAMP',
                 'STATUS',
@@ -521,7 +522,7 @@ class SampleResults():
                 'TEST_COMPLETED',
                 'APPROVED',
         ]
-        return df
+        return df[column_order]
 
 class DispositionHistory():
     def __init__(self, cutoff_month_count):
@@ -682,6 +683,7 @@ class DbWriteSampleResult():
                 "WORKLIST_ID": Integer,
                 "TASK_ID": Integer,
                 "OPERATION": Text,
+                "SOP": Text,
                 "RECEIVED": DateTime,
                 "REJECTED": DateTime,
                 "WORKLIST_START": DateTime,
