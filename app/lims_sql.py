@@ -6,6 +6,7 @@ import os
 import pandas as pd
 import psycopg2
 import pytz
+import re
 import time
 import threading
 
@@ -24,7 +25,7 @@ from lims_query import (
     test_query_sample_receipt_and_review_dates,
 )
 
-# config.setup(environment='PROD')
+config.setup(environment='PROD')
 
 def main():
     def task_3_month_results(): # Run on every hour
@@ -273,7 +274,8 @@ class SampleResults():
 
         df_operation_sops = postgres.read(table_name='operation_sop')
         self.result = self.merge_operation_sops(df_operation_sops)
-        
+
+        self.extract_sop_from_operation()
 
     def sample_results(self, oracle, lots):
         query_substitute = oracle.query_string_substitution('lot_id', lots)
@@ -340,7 +342,6 @@ class SampleResults():
 
         return df_concat
 
-    # Pivot table to show test status in columns
     def pivot_table(self, df):
         df_result = df.pivot(index='TASK_ID', columns='FINAL_STATE', values='TIMESTAMP')
         df_result.rename(columns={'ONLINE':'RECEIVED'}, inplace=True)
@@ -526,6 +527,26 @@ class SampleResults():
                 'REVIEW_DURATION'
         ]
         return df[column_order]
+
+    def extract_sop_from_operation(self):
+        def regex_operation_for_sop(operation_string):
+            regex_list = [
+                '([A-Z]{2})-([0-9]{2})-(.{2}[0-9]{3})',
+                '([A-Z]{2}.{2}[0-9]{5})',
+                '([A-Z]{2}[0-9]{3})'
+            ]
+            for regex in regex_list:
+                re_object = re.search(regex, operation_string)
+                if re_object != None:
+                    result =  "".join(re_object.groups())
+                    if len(result)==5:
+                        result = 'TO11' + result
+                    print(result)
+                    return result
+            return None
+
+        boolean = self.result['SOP'].isnull()
+        self.result.loc[boolean, 'SOP'] = self.result['OPERATION'].apply(regex_operation_for_sop)
 
 class DispositionHistory():
     def __init__(self, cutoff_month_count):
