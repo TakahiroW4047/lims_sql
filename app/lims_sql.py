@@ -25,7 +25,7 @@ from lims_query import (
     test_query_sample_receipt_and_review_dates,
 )
 
-config.setup(environment='PROD')
+# config.setup(environment='PROD')
 
 def main():
     def task_3_month_results(): # Run on every hour
@@ -276,6 +276,7 @@ class SampleResults():
         self.result = self.merge_operation_sops(df_operation_sops)
 
         self.extract_sop_from_operation()
+        self.add_group_based_on_sop()
 
     def sample_results(self, oracle, lots):
         query_substitute = oracle.query_string_substitution('lot_id', lots)
@@ -541,12 +542,23 @@ class SampleResults():
                     result =  "".join(re_object.groups())
                     if len(result)==5:
                         result = 'TO11' + result
-                    print(result)
                     return result
             return None
 
         boolean = self.result['SOP'].isnull()
         self.result.loc[boolean, 'SOP'] = self.result['OPERATION'].apply(regex_operation_for_sop)
+
+    def add_group_based_on_sop(self):
+        def find_group(sop):
+            try:
+                group = group_sop[group_sop['SOP']==sop]['Group'].values[0]
+            except:
+                group = None
+            return group
+
+        group_sop = pd.read_csv('group_split_by_sop.csv')
+        self.result['GROUP'] = self.result['SOP'].apply(find_group)
+
 
 class DispositionHistory():
     def __init__(self, cutoff_month_count):
@@ -708,6 +720,7 @@ class DbWriteSampleResult():
                 "TASK_ID": Integer,
                 "OPERATION": Text,
                 "SOP": Text,
+                "GROUP": Text,
                 "RECEIVED": DateTime,
                 "REJECTED": DateTime,
                 "WORKLIST_START": DateTime,
