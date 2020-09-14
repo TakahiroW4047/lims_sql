@@ -521,6 +521,9 @@ class SampleResults():
                 'WORKLIST_START',
                 'TEST_COMPLETED',
                 'APPROVED',
+                'STAGNATION_DURATION', 
+                'TEST_DURATION', 
+                'REVIEW_DURATION'
         ]
         return df[column_order]
 
