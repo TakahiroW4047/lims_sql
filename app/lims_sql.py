@@ -24,7 +24,7 @@ from lims_query import (
     test_query_sample_receipt_and_review_dates,
 )
 
-config.setup(environment='PROD')
+# config.setup(environment='PROD')
 
 def main():
     def task_3_month_results(): # Run on every hour
@@ -43,7 +43,7 @@ def main():
         while True:
             time.sleep(1)
             start_time = datetime.now()
-            trigger = 3
+            trigger = 55
             if local_datetime().minute == trigger and has_ran==False:
                 logging.info(local_datetime_string() + '- Task Initiated, 3 month results')
                 for func in func_list:
@@ -60,16 +60,16 @@ def main():
         tablename_update_date = 'update_date_3_years'
         func_list = [
             lambda x=cutoff_month: update_operation_sop(cutoff_month_count=x),
-            # lambda x=cutoff_month, y=tablename_dispo_history: update_disposition_history(cutoff_month_count=x, table_name=y),
-            # lambda x=tablename_dispo_history, y=tablename_sample_results: update_sample_results(dispo_table_name=x, result_table_name=y),
-            # lambda x=tablename_dispo_history, y=tablename_sample_results: update_disposition_history_received(dispo_table_name=x, result_table_name=y),
+            lambda x=cutoff_month, y=tablename_dispo_history: update_disposition_history(cutoff_month_count=x, table_name=y),
+            lambda x=tablename_dispo_history, y=tablename_sample_results: update_sample_results(dispo_table_name=x, result_table_name=y),
+            lambda x=tablename_dispo_history, y=tablename_sample_results: update_disposition_history_received(dispo_table_name=x, result_table_name=y),
             lambda x=tablename_update_date: update_date(x)
         ]
 
         has_ran = False
         internal_day = local_datetime().day
         while True:
-            # time.sleep(10)
+            time.sleep(10)
             today = local_datetime().day
             start_time = datetime.now()
             if internal_day == today and has_ran==False:
@@ -106,8 +106,8 @@ def main():
     logging.info(local_datetime_string() + '- App Initiated')
 
     threads = list()
-    # func_list = [task_3_month_results, task_3_year_results]
-    func_list = [task_3_month_results]
+    func_list = [task_3_month_results, task_3_year_results]
+    # func_list = [task_3_month_results]
     # func_list = [lambda: print('hello')]
 
     for func in func_list:
