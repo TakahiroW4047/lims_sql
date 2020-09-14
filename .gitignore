@@ -3,4 +3,6 @@
 **/config.py
 /env
 .env*
+.coverage
 log/lims_sql.log
+**/htmlcov
