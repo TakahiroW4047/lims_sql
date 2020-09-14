@@ -44,7 +44,7 @@ def main():
         while True:
             time.sleep(1)
             start_time = datetime.now()
-            trigger = 55
+            trigger = 19
             if local_datetime().minute == trigger and has_ran==False:
                 logging.info(local_datetime_string() + '- Task Initiated, 3 month results')
                 for func in func_list:
@@ -107,8 +107,8 @@ def main():
     logging.info(local_datetime_string() + '- App Initiated')
 
     threads = list()
-    func_list = [task_3_month_results, task_3_year_results]
-    # func_list = [task_3_month_results]
+    # func_list = [task_3_month_results, task_3_year_results]
+    func_list = [task_3_month_results]
     # func_list = [lambda: print('hello')]
 
     for func in func_list:
