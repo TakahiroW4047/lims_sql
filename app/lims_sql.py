@@ -97,6 +97,7 @@ def main():
         
     def update_disposition_history_received(dispo_table_name, result_table_name):
         df_accurate_received_dates = DispositionHistoryReceivedDatesFixed(result_table_name).result
+        print(df_accurate_received_dates[df_accurate_received_dates['LOT_NUMBER']=='A20C24UX01'])
         DbUpdateDispoHistory(df_accurate_received_dates, table_name=dispo_table_name)
 
     def update_date(table_name):
@@ -108,7 +109,7 @@ def main():
 
     threads = list()
     func_list = [task_3_month_results, task_3_year_results]
-    # func_list = [task_3_month_results]
+    # func_list = [task_3_year_results]
     # func_list = [lambda: print('hello')]
 
     for func in func_list:
@@ -684,7 +685,8 @@ class DispositionHistoryReceivedDatesFixed():
         self.result = df_accurate_received_dates
 
     def find_accurate_received_dates(self, df):
-        return df.groupby('LOT_NUMBER').agg({'RECEIVED':np.min}).reset_index()
+        df_temp = df[df['METHOD_DATAGROUP'] != 'MFG_DATA_ENTRY']
+        return df_temp.groupby(['LOT_NUMBER']).agg({'RECEIVED':np.min}).reset_index()
 
 
 class PostgresDB:
