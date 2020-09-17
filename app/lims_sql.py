@@ -109,7 +109,7 @@ def main():
 
     threads = list()
     func_list = [task_3_month_results, task_3_year_results]
-    # func_list = [task_3_year_results]
+    # func_list = [task_3_month_results]
     # func_list = [lambda: print('hello')]
 
     for func in func_list:
@@ -274,7 +274,11 @@ class SampleResults():
         self.result = self.sample_results(oracle, lots)
 
         df_operation_sops = postgres.read(table_name='operation_sop')
-        self.result = self.merge_operation_sops(df_operation_sops)
+        df_operation_sops_supplement = pd.read_csv('operation_to_sop.csv')
+
+        self.result = self.merge_operation_sops(
+            df_operation_sops, 
+            df_operation_sops_supplement)
 
         self.extract_sop_from_operation()
         self.add_group_based_on_sop()
@@ -502,8 +506,19 @@ class SampleResults():
         # Change type to hours
         df.loc[:,'REVIEW_DURATION'].astype('timedelta64[h]')
 
-    def merge_operation_sops(self, df_operation_sops):
+    def merge_operation_sops(self, df_operation_sops, df_operation_sops_supplement):
         df = self.result.merge(df_operation_sops, on='OPERATION', how='left')
+
+        def supplement_sop(operation):
+            try:
+                supplemental_sop = df_operation_sops_supplement[df_operation_sops_supplement['OPERATION']==operation]['SOP'].values[0]
+            except:
+                supplemental_sop = None
+            return supplemental_sop
+
+        boolean = df['SOP'].isnull()
+        df.loc[boolean, 'SOP'] = df['OPERATION'].apply(supplement_sop)
+
         column_order = [
                 'LOT_NUMBER',
                 'MATERIAL_NAME',
