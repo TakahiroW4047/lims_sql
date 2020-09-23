@@ -38,11 +38,9 @@ def query_final_container_lots(cutoff_date):
             )
             OR 
             (
-                (material_name='RAHF BDS' AND material_type='CELL_CULTURE') OR
-                (material_name='RAHF_PFM_BDS' AND
-                    (material_type='CELL_CULTURE' OR material_type='CELL_CULTURE1')
-                ) OR
-                (material_name='BAX 855' AND material_type='BULK MANUFACTURING')
+                (material_name='RAHF BDS' AND material_type IN ('CELL_CULTURE', 'CELL_CULTURE1', 'PURIFICATION')) 
+                OR (material_name='RAHF_PFM_BDS')
+                OR (material_name='BAX 855' AND material_type='BULK MANUFACTURING')
             )
         ) AND date_in > to_date('{cutoff_date}', 'DD-MON-YY')
     """

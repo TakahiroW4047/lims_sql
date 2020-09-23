@@ -23,11 +23,11 @@ from lims_query import (
     query_update_dispo_received_date
 )
 
-# config.setup(environment='DEV')
+config.setup(environment='PROD')
 
 def main():
-    def task_3_month_results(): # Run on every hour
-        cutoff_month=3
+    def task_month_results(): # Run on every hour
+        cutoff_month=6
         tablename_dispo_history = 'dispo_history'
         tablename_sample_results = 'sample_results'
         tablename_update_date = 'update_date'
@@ -45,17 +45,17 @@ def main():
         while True:
             time.sleep(1)
             start_time = datetime.now()
-            trigger = 55
+            trigger = 42
             if local_datetime().minute == trigger and has_ran==False:
-                logging.info(local_datetime_string() + '- Task Initiated, 3 month results')
+                logging.info(local_datetime_string() + f'- Task Initiated, {cutoff_month} month results')
                 for func in func_list:
                     func()
                 has_ran=True
-                logging.info(local_datetime_string() + '- Task Completed, 3 month results, duration=' + str(datetime.now()-start_time))
+                logging.info(local_datetime_string() + f'- Task Completed, {cutoff_month} month results, duration=' + str(datetime.now()-start_time))
             if local_datetime().minute != trigger:
                 has_ran=False
 
-    def task_3_year_results():  # Run once a day at midnight
+    def task_year_results():  # Run once a day at midnight
         cutoff_month=36
         tablename_dispo_history = 'dispo_history_3_years'
         tablename_sample_results = 'sample_results_3_years'
@@ -107,8 +107,8 @@ def main():
     logging.info(local_datetime_string() + '- App Initiated')
 
     threads = list()
-    func_list = [task_3_month_results, task_3_year_results]
-    # func_list = [task_3_year_results]
+    # func_list = [task_month_results, task_year_results]
+    func_list = [task_month_results]
     # func_list = [lambda: print('hello')]
 
     for func in func_list:
