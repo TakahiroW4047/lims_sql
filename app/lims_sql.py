@@ -23,7 +23,7 @@ from lims_query import (
     query_update_dispo_received_date
 )
 
-# config.setup(environment='PROD')
+config.setup(environment='DEV')
 
 def main():
     def task_3_month_results(): # Run on every hour
@@ -32,10 +32,12 @@ def main():
         tablename_sample_results = 'sample_results'
         tablename_update_date = 'update_date'
         func_list = [
-            lambda x=cutoff_month: update_operation_sop(cutoff_month_count=x),
-            lambda x=cutoff_month, y=tablename_dispo_history: update_disposition_history(cutoff_month_count=x, table_name=y),
-            lambda x=tablename_dispo_history, y=tablename_sample_results, : update_sample_results(dispo_table_name=x, result_table_name=y),
-            lambda x=tablename_dispo_history, y=tablename_sample_results: update_disposition_history_received(dispo_table_name=x, result_table_name=y),
+            lambda x=cutoff_month, y=tablename_dispo_history: update_disposition_history(
+                cutoff_month_count=x, table_name=y),
+            lambda x=cutoff_month, y=tablename_dispo_history, z=tablename_sample_results : update_sample_results(
+                cutoff_month_count=x, dispo_table_name=y, result_table_name=z),
+            lambda x=tablename_dispo_history, y=tablename_sample_results: update_disposition_history_received(
+                dispo_table_name=x, result_table_name=y),
             lambda x=tablename_update_date: update_date(x)
         ]
 
@@ -54,15 +56,17 @@ def main():
                 has_ran=False
 
     def task_3_year_results():  # Run once a day at midnight
-        cutoff_month=36
+        cutoff_month=50
         tablename_dispo_history = 'dispo_history_3_years'
         tablename_sample_results = 'sample_results_3_years'
         tablename_update_date = 'update_date_3_years'
         func_list = [
-            lambda x=cutoff_month: update_operation_sop(cutoff_month_count=x),
-            lambda x=cutoff_month, y=tablename_dispo_history: update_disposition_history(cutoff_month_count=x, table_name=y),
-            lambda x=tablename_dispo_history, y=tablename_sample_results: update_sample_results(dispo_table_name=x, result_table_name=y),
-            lambda x=tablename_dispo_history, y=tablename_sample_results: update_disposition_history_received(dispo_table_name=x, result_table_name=y),
+            lambda x=cutoff_month, y=tablename_dispo_history: update_disposition_history(
+                cutoff_month_count=x, table_name=y),
+            lambda x=cutoff_month, y=tablename_dispo_history, z=tablename_sample_results: update_sample_results(
+                cutoff_month_count=x, dispo_table_name=y, result_table_name=z),
+            lambda x=tablename_dispo_history, y=tablename_sample_results: update_disposition_history_received(
+                dispo_table_name=x, result_table_name=y),
             lambda x=tablename_update_date: update_date(x)
         ]
 
@@ -82,16 +86,12 @@ def main():
                 has_ran=False
                 internal_day = today
 
-    def update_operation_sop(cutoff_month_count):
-        result = OperationSOPCombinations(cutoff_month_count=cutoff_month_count).result
-        DbWriteOperationSOP(result)
-
     def update_disposition_history(cutoff_month_count, table_name):
         dispo  = DispositionHistory(cutoff_month_count).result    # Run time 7min 55sec
         DbWriteDispoHistory(dispo, table_name=table_name)
 
-    def update_sample_results(dispo_table_name, result_table_name):
-        result = SampleResults(table_name=dispo_table_name).result # Run time 4min
+    def update_sample_results(cutoff_month_count, dispo_table_name, result_table_name):
+        result = SampleResults(cutoff_month_count=cutoff_month_count, table_name=dispo_table_name).result # Run time 4min
         DbWriteSampleResult(result, table_name=result_table_name)
 
     def update_disposition_history_received(dispo_table_name, result_table_name):
@@ -107,8 +107,8 @@ def main():
     logging.info(local_datetime_string() + '- App Initiated')
 
     threads = list()
-    func_list = [task_3_month_results, task_3_year_results]
-    # func_list = [task_3_month_results]
+    # func_list = [task_3_month_results, task_3_year_results]
+    func_list = [task_3_year_results]
     # func_list = [lambda: print('hello')]
 
     for func in func_list:
@@ -265,14 +265,14 @@ class LotNumberFinalContainer():
 
 
 class SampleResults():
-    def __init__(self, table_name):
+    def __init__(self, cutoff_month_count, table_name):
         oracle = OracleDB()
         postgres = PostgresDB()
 
         lots = postgres.read(table_name=table_name)['LOT_ID'].values
         self.result = self.sample_results(oracle, lots)
 
-        df_taskid_operation_sops = postgres.read(table_name='operation_sop')
+        df_taskid_operation_sops = OperationSOPCombinations(cutoff_month_count).result
         df_operation_sops_supplement = pd.read_csv('operation_to_sop.csv')
 
         self.result = self.merge_operation_sops(
@@ -834,26 +834,6 @@ class DbWriteUpdateDatetime():
             }
         )
 
-
-class DbWriteOperationSOP():
-    def __init__(self, df):
-        self.postgres = PostgresDB()
-        self.table_name = 'operation_sop'
-        self._db_write(df)
-
-    def _db_write(self, df):
-        df.to_sql(
-            self.table_name,
-            self.postgres.engine,
-            if_exists='replace',
-            index=False,
-            chunksize=500,
-            dtype={
-                "TASK_ID": Integer,
-                "OPERATION": Text,
-                "SOP": Text
-            }
-        )
 
 if __name__ == "__main__":
     main()
