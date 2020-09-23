@@ -1,22 +1,3 @@
-# def query_advate_lots():
-#     return """
-#         SELECT
-#             lot_id,
-#             lot_number,        
-#             material_name,
-#             material_type,
-#             material_datagroup,
-#             date_in,
-#             due_date,
-#             condition
-#         FROM SQA_LOTS WHERE
-#             (
-#                 lot_number LIKE 'TAA_____A'
-#                 OR lot_number LIKE 'TAA_____'
-#             )
-#             AND date_in > to_date('01-JAN-17', 'DD-MON-YY')
-#     """
-
 def query_final_container_lots(cutoff_date):
     return f"""
         SELECT

@@ -45,7 +45,7 @@ def main():
         while True:
             time.sleep(1)
             start_time = datetime.now()
-            trigger = 42
+            trigger = 55
             if local_datetime().minute == trigger and has_ran==False:
                 logging.info(local_datetime_string() + f'- Task Initiated, {cutoff_month} month results')
                 for func in func_list:
