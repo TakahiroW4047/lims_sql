@@ -43,7 +43,7 @@ def main():
         while True:
             time.sleep(1)
             start_time = datetime.now()
-            trigger = 55
+            trigger = 57
             if local_datetime().minute == trigger and has_ran==False:
                 logging.info(local_datetime_string() + '- Task Initiated, 3 month results')
                 for func in func_list:
