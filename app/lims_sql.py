@@ -23,7 +23,7 @@ from lims_query import (
     query_update_dispo_received_date
 )
 
-config.setup(environment='DEV')
+# config.setup(environment='DEV')
 
 def main():
     def task_3_month_results(): # Run on every hour
@@ -56,7 +56,7 @@ def main():
                 has_ran=False
 
     def task_3_year_results():  # Run once a day at midnight
-        cutoff_month=50
+        cutoff_month=36
         tablename_dispo_history = 'dispo_history_3_years'
         tablename_sample_results = 'sample_results_3_years'
         tablename_update_date = 'update_date_3_years'
