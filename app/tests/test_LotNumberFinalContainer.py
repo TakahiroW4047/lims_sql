@@ -16,7 +16,7 @@ class LotNumberFinalContainerTest(unittest.TestCase):
                     'THA20001', 'THA20001A',
                     'TRA20001', 'TRA20001A',
                     'TNA20001', 'TNA20001A',
-                    'NA', 'NA', 'NA'
+                    'NA', 'NA', 'NA', 'NA', 'NA'
                     ],
                 'LOT_ID': [
                     1, 2, 
@@ -24,7 +24,7 @@ class LotNumberFinalContainerTest(unittest.TestCase):
                     5, 6,
                     7, 8,
                     9, 10,
-                    11, 12, 13
+                    11, 12, 13, 14, 15
                     ],
                 'MATERIAL_NAME': [
                     'RVWF', 'RVWF', 
@@ -32,7 +32,7 @@ class LotNumberFinalContainerTest(unittest.TestCase):
                     'AHF-M BULK', 'AHFM FINAL CONTAINER',
                     'RAHF BDS', 'RAHF FINAL CONTAINER',
                     'RFIX_BDS', 'RFIX_FINAL_CONTAINER',
-                    'RAHF BDS', 'RAHF_PFM_BDS', 'BAX 855'
+                    'RAHF BDS', 'RAHF BDS', 'RAHF BDS', 'RAHF_PFM_BDS', 'BAX 855'
                     ],
                 'MATERIAL_TYPE': [
                     'BULK DRUG', 'FINAL CONTAINER',
@@ -40,7 +40,7 @@ class LotNumberFinalContainerTest(unittest.TestCase):
                     'FORM_FINISH', 'FINAL_CONTAINER',
                     'FORM_FINISH', 'FINAL_CONTAINER',
                     'FORM_FINISH', 'FINAL_CONTAINER',
-                    'CELL_CULTURE', 'NA', 'NA'
+                    'CELL_CULTURE', 'CELL_CULTURE1', 'PURIFICATION', 'NA', 'NA'
                     ]
             }
         )
@@ -72,7 +72,7 @@ class LotNumberFinalContainerTest(unittest.TestCase):
 
     def test_filter_bds(self):
         result_actual = self.instance._filter_bds(self.df)['LOT_ID'].values
-        result_expected = [11, 12, 13]
+        result_expected = [11, 12, 13, 14, 15]
         self.assertCountEqual(result_actual, result_expected)
 
 if __name__ == "__main__":
