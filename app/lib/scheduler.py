@@ -3,6 +3,7 @@ import logging
 import pytz
 import threading
 import time
+import unittest
 
 class Scheduler:
     def __init__(self, func_list):
@@ -92,7 +93,6 @@ def datetime_utc_to_local(dt):
     return date
 
 if __name__ == '__main__':
-    import logging
     def func_test():
         timenow = datetime.now()
         print(timenow)
