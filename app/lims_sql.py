@@ -5,15 +5,14 @@ import numpy as np
 import os
 import pandas as pd
 import psycopg2
-import pytz
 import re
 import time
-import threading
 
 from datetime import datetime, timedelta
 from sqlalchemy import create_engine
 from sqlalchemy.types import Integer, Text, String, DateTime, BigInteger
 
+from lib.scheduler import Scheduler, local_datetime_string
 from lims_query import (
     query_final_container_lots,
     query_test_start_and_completion_time,
@@ -26,11 +25,36 @@ from lims_query import (
 config.setup(environment='PROD')
 
 def main():
-    def task_month_results(): # Run on every hour
-        cutoff_month=6
-        tablename_dispo_history = 'dispo_history'
-        tablename_sample_results = 'sample_results'
-        tablename_update_date = 'update_date'
+    logging.basicConfig(filename='log/lims_sql.log', format='%(levelname)s: %(message)s', level=logging.DEBUG)
+    logging.info(local_datetime_string() + '- App Initiated')
+
+    kwargs_task_hourly = {
+        cutoff_month: 6, 
+        tablename_dispo_history: 'dispo_history', 
+        tablename_sample_results: 'sample_results', 
+        tablename_update_date: 'update_date'
+    }
+
+    kwargs_task_daily = {
+        cutoff_month: 36, 
+        tablename_dispo_history: 'dispo_history_3_years', 
+        tablename_sample_results: 'sample_results_3_years', 
+        tablename_update_date: 'update_date_3_years'
+    }
+
+    funcs = {
+        'hourly': lambda kwargs=kwargs_task_hourly: SampleUpdateTask(**kwargs),
+        'daily': lambda kwargs=kwargs_task_daily: SampleUpdateTask(**kwargs)
+        }
+
+    Scheduler([funcs['hourly']]).on(hour=15, minute=55).every(hours=1, minutes=0).run()
+    Scheduler([funcs['daily']]).on(hour=0, minute=0).run()
+
+    return None
+
+
+class SampleUpdateTask:
+    def __init__(self, cutoff_month, tablename_dispo_history, tablename_sample_results, tablename_update_date):
         func_list = [
             lambda x=cutoff_month, y=tablename_dispo_history: update_disposition_history(
                 cutoff_month_count=x, table_name=y),
@@ -40,51 +64,9 @@ def main():
                 dispo_table_name=x, result_table_name=y),
             lambda x=tablename_update_date: update_date(x)
         ]
-
-        has_ran = False
-        while True:
-            time.sleep(1)
-            start_time = datetime.now()
-            trigger = 55
-            if local_datetime().minute == trigger and has_ran==False:
-                logging.info(local_datetime_string() + f'- Task Initiated, {cutoff_month} month results')
-                for func in func_list:
-                    func()
-                has_ran=True
-                logging.info(local_datetime_string() + f'- Task Completed, {cutoff_month} month results, duration=' + str(datetime.now()-start_time))
-            if local_datetime().minute != trigger:
-                has_ran=False
-
-    def task_year_results():  # Run once a day at midnight
-        cutoff_month=36
-        tablename_dispo_history = 'dispo_history_3_years'
-        tablename_sample_results = 'sample_results_3_years'
-        tablename_update_date = 'update_date_3_years'
-        func_list = [
-            lambda x=cutoff_month, y=tablename_dispo_history: update_disposition_history(
-                cutoff_month_count=x, table_name=y),
-            lambda x=cutoff_month, y=tablename_dispo_history, z=tablename_sample_results: update_sample_results(
-                cutoff_month_count=x, dispo_table_name=y, result_table_name=z),
-            lambda x=tablename_dispo_history, y=tablename_sample_results: update_disposition_history_received(
-                dispo_table_name=x, result_table_name=y),
-            lambda x=tablename_update_date: update_date(x)
-        ]
-
-        has_ran = False
-        internal_day = local_datetime().day
-        while True:
-            time.sleep(10)
-            today = local_datetime().day
-            start_time = datetime.now()
-            if internal_day == today and has_ran==False:
-                logging.info(local_datetime_string() + '- Task Initiated, 3 year results')
-                for func in func_list:
-                    func()
-                has_ran=True
-                logging.info(local_datetime_string() + '- Task Completed, 3 year results, duration=' + str(datetime.now()-start_time))
-            if internal_day != today:
-                has_ran=False
-                internal_day = today
+        for func in func_list:
+            func()
+        return None
 
     def update_disposition_history(cutoff_month_count, table_name):
         dispo  = DispositionHistory(cutoff_month_count).result    # Run time 7min 55sec
@@ -96,46 +78,11 @@ def main():
 
     def update_disposition_history_received(dispo_table_name, result_table_name):
         df_accurate_received_dates = DispositionHistoryReceivedDatesFixed(result_table_name).result
-        print(df_accurate_received_dates[df_accurate_received_dates['LOT_NUMBER']=='A20C24UX01'])
         DbUpdateDispoHistory(df_accurate_received_dates, table_name=dispo_table_name)
 
     def update_date(table_name):
         update_date = pd.DataFrame({"update_date": [local_datetime_string()]})
         DbWriteUpdateDatetime(update_date, table_name=table_name)
-    
-    logging.basicConfig(filename='log/lims_sql.log', format='%(levelname)s: %(message)s', level=logging.DEBUG)
-    logging.info(local_datetime_string() + '- App Initiated')
-
-    threads = list()
-    # func_list = [task_month_results, task_year_results]
-    func_list = [task_month_results]
-    # func_list = [lambda: print('hello')]
-
-    for func in func_list:
-        thread = threading.Thread(target=func)
-        threads.append(thread)
-        thread.start()
-
-    for thread in threads:
-        thread.join()
-
-    return None
-
-def local_datetime():
-    dt = datetime.utcnow()
-    return datetime_utc_to_local(dt)
-
-def local_datetime_string():
-    dt = datetime_utc_to_local(datetime.utcnow())
-    dt_string = str(
-        datetime.strftime(dt, "%d%b%y %H:%M")
-        ).upper()
-    return dt_string
-
-def datetime_utc_to_local(dt):
-    date = dt.replace(tzinfo=pytz.UTC)
-    date = date.astimezone(pytz.timezone("US/Pacific"))
-    return date
 
 
 class OracleDB:
