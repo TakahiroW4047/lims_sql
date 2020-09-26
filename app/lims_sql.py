@@ -29,17 +29,17 @@ def main():
     logging.info(local_datetime_string() + '- App Initiated')
 
     kwargs_task_hourly = {
-        cutoff_month: 6, 
-        tablename_dispo_history: 'dispo_history', 
-        tablename_sample_results: 'sample_results', 
-        tablename_update_date: 'update_date'
+        "cutoff_month": 1, 
+        "tablename_dispo_history": 'dispo_history', 
+        "tablename_sample_results": 'sample_results', 
+        "tablename_update_date": 'update_date'
     }
 
     kwargs_task_daily = {
-        cutoff_month: 36, 
-        tablename_dispo_history: 'dispo_history_3_years', 
-        tablename_sample_results: 'sample_results_3_years', 
-        tablename_update_date: 'update_date_3_years'
+        "cutoff_month": 1, 
+        "tablename_dispo_history": 'dispo_history_3_years', 
+        "tablename_sample_results": 'sample_results_3_years', 
+        "tablename_update_date": 'update_date_3_years'
     }
 
     funcs = {
@@ -47,7 +47,7 @@ def main():
         'daily': lambda kwargs=kwargs_task_daily: SampleUpdateTask(**kwargs)
         }
 
-    Scheduler([funcs['hourly']]).on(hour=15, minute=55).every(hours=1, minutes=0).run()
+    Scheduler([funcs['hourly']]).on(hour=10, minute=55).every(hours=1, minutes=0).run()
     Scheduler([funcs['daily']]).on(hour=0, minute=0).run()
 
     return None

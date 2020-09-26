@@ -20,8 +20,8 @@ COPY . /usr/src/app
 RUN echo > log/lims_sql.log
 
 # install psycopg2 dependencies
-RUN apt-get update && apt-get install
-RUN apt-get install libpq-dev
+RUN apt-get update -y && apt-get install -y
+RUN apt-get install libpq-dev -y
 RUN apt-get install nano
 
 # install cx_Oracle dependencies
