@@ -24,7 +24,6 @@ class Scheduler:
     def func_on(self, func):
             has_ran = False
             while True:
-                time.sleep(1)
                 timenow = local_datetime()
                 if (timenow==self.time_on) and has_ran==False:
                     start_time = datetime.now()
@@ -32,16 +31,19 @@ class Scheduler:
                     delta = datetime.now() - start_time
                     logging.info(f"{local_datetime_string()}: {func.__name__} Task Completed. Duration: {delta}")
                     has_ran = True
+                    new_day = self.time_on.day + 1
+                    self.time_on = self.time_on.replace(day=new_day)
                 if (timenow!=self.time_on):
                     has_ran = False 
+                time.sleep(1)
 
     def func_every(self, func):
             initiated = False
             while initiated==False:
-                time.sleep(1)
                 timenow = local_datetime()
                 if (self.time_on==timenow and initiated==False):
                     initiated = True
+                time.sleep(1)
 
             has_ran = False
             timenext = local_datetime() + self.time_every
@@ -51,7 +53,6 @@ class Scheduler:
             logging.info(f"{local_datetime_string()}: {func.__name__} Task Completed. Duration: {delta}")
 
             while True:
-                time.sleep(1)
                 timenow = local_datetime()
                 if (timenow==timenext and has_ran==False):
                     start_time = datetime.now()
@@ -62,6 +63,7 @@ class Scheduler:
                     timenext += self.time_every
                 if (timenow!=timenext):
                     has_ran=False
+                time.sleep(1)
 
     def run(self):
         if self.status_on_used==False:

@@ -69,11 +69,11 @@ class SampleUpdateTask:
         return None
 
     def update_disposition_history(cutoff_month_count, table_name):
-        dispo  = DispositionHistory(cutoff_month_count).result    # Run time 7min 55sec
+        dispo  = DispositionHistory(cutoff_month_count).result    
         DbWriteDispoHistory(dispo, table_name=table_name)
 
     def update_sample_results(cutoff_month_count, dispo_table_name, result_table_name):
-        result = SampleResults(cutoff_month_count=cutoff_month_count, table_name=dispo_table_name).result # Run time 4min
+        result = SampleResults(cutoff_month_count=cutoff_month_count, table_name=dispo_table_name).result 
         DbWriteSampleResult(result, table_name=result_table_name)
 
     def update_disposition_history_received(dispo_table_name, result_table_name):
