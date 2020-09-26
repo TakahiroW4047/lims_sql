@@ -29,14 +29,14 @@ def main():
     logging.info(local_datetime_string() + '- App Initiated')
 
     kwargs_task_hourly = {
-        "cutoff_month": 1, 
+        "cutoff_month": 6, 
         "tablename_dispo_history": 'dispo_history', 
         "tablename_sample_results": 'sample_results', 
         "tablename_update_date": 'update_date'
     }
 
     kwargs_task_daily = {
-        "cutoff_month": 1, 
+        "cutoff_month": 6, 
         "tablename_dispo_history": 'dispo_history_3_years', 
         "tablename_sample_results": 'sample_results_3_years', 
         "tablename_update_date": 'update_date_3_years'
@@ -47,7 +47,7 @@ def main():
         'daily': lambda kwargs=kwargs_task_daily: SampleUpdateTask(**kwargs)
         }
 
-    Scheduler([funcs['hourly']]).on(hour=10, minute=55).every(hours=1, minutes=0).run()
+    Scheduler([funcs['hourly']]).on(hour=15, minute=55).every(hours=1, minutes=0).run()
     Scheduler([funcs['daily']]).on(hour=0, minute=0).run()
 
     return None
@@ -56,31 +56,31 @@ def main():
 class SampleUpdateTask:
     def __init__(self, cutoff_month, tablename_dispo_history, tablename_sample_results, tablename_update_date):
         func_list = [
-            lambda x=cutoff_month, y=tablename_dispo_history: update_disposition_history(
+            lambda x=cutoff_month, y=tablename_dispo_history: self.update_disposition_history(
                 cutoff_month_count=x, table_name=y),
-            lambda x=cutoff_month, y=tablename_dispo_history, z=tablename_sample_results : update_sample_results(
+            lambda x=cutoff_month, y=tablename_dispo_history, z=tablename_sample_results : self.update_sample_results(
                 cutoff_month_count=x, dispo_table_name=y, result_table_name=z),
-            lambda x=tablename_dispo_history, y=tablename_sample_results: update_disposition_history_received(
+            lambda x=tablename_dispo_history, y=tablename_sample_results: self.update_disposition_history_received(
                 dispo_table_name=x, result_table_name=y),
-            lambda x=tablename_update_date: update_date(x)
+            lambda x=tablename_update_date: self.update_date(x)
         ]
         for func in func_list:
             func()
         return None
 
-    def update_disposition_history(cutoff_month_count, table_name):
+    def update_disposition_history(self,cutoff_month_count, table_name):
         dispo  = DispositionHistory(cutoff_month_count).result    
         DbWriteDispoHistory(dispo, table_name=table_name)
 
-    def update_sample_results(cutoff_month_count, dispo_table_name, result_table_name):
+    def update_sample_results(self, cutoff_month_count, dispo_table_name, result_table_name):
         result = SampleResults(cutoff_month_count=cutoff_month_count, table_name=dispo_table_name).result 
         DbWriteSampleResult(result, table_name=result_table_name)
 
-    def update_disposition_history_received(dispo_table_name, result_table_name):
+    def update_disposition_history_received(self, dispo_table_name, result_table_name):
         df_accurate_received_dates = DispositionHistoryReceivedDatesFixed(result_table_name).result
         DbUpdateDispoHistory(df_accurate_received_dates, table_name=dispo_table_name)
 
-    def update_date(table_name):
+    def update_date(self, table_name):
         update_date = pd.DataFrame({"update_date": [local_datetime_string()]})
         DbWriteUpdateDatetime(update_date, table_name=table_name)
 
@@ -739,7 +739,6 @@ class DbUpdateDispoHistory():
             date = row['RECEIVED']
             data_string = f"(\'{lot}\', \'{date}\'::timestamp),"
             self.data += data_string
-            if lot == 'TAA20013A': print('Its here!: ', date)
             return None
 
         df.apply(pull_row_data, axis=1)
@@ -756,10 +755,8 @@ class DbUpdateDispoHistory():
         cur = conn.cursor()
         
         query = query_update_dispo_received_date(self.table_name, self.data)
-        print(query[:200])
         cur.execute(query)
         conn.commit()
-        print('Done!')
         cur.close()
         conn.close()
         
