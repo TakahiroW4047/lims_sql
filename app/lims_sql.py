@@ -42,13 +42,14 @@ def main():
         "tablename_update_date": 'update_date_3_years'
     }
 
-    funcs = {
-        'hourly': lambda kwargs=kwargs_task_hourly: SampleUpdateTask(**kwargs),
-        'daily': lambda kwargs=kwargs_task_daily: SampleUpdateTask(**kwargs)
-        }
+    def hourly():
+        return SampleUpdateTask(**kwargs_task_hourly)
 
-    Scheduler([funcs['hourly']]).on(hour=15, minute=55).every(hours=1, minutes=0).run()
-    Scheduler([funcs['daily']]).on(hour=0, minute=0).run()
+    def daily():
+        return SampleUpdateTask(**kwargs_task_daily)
+
+    Scheduler([hourly]).on(hour=10, minute=55).every(hours=1, minutes=0).run()
+    Scheduler([daily]).on(hour=23, minute=55).run()
 
     return None
 

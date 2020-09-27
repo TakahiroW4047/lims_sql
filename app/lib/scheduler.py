@@ -11,13 +11,16 @@ class Scheduler:
         self.status_on_used = False
         self.status_every_used = False
 
-    def on(self, hour, minute):
-        self.time_on = local_datetime().replace(hour=hour, minute=minute)
+    def on(self, **kwargs):
+        self.local_time = local_datetime()
+        self.time_on = self.local_time.replace(**kwargs)
         self.status_on_used = True
+        if self.time_on < self.local_time:
+            raise ValueError("Initiation date cannot be in the past!")
         return self
 
-    def every(self, hours, minutes):
-        self.time_every = timedelta(hours=hours, minutes=minutes)
+    def every(self, **kwargs):
+        self.time_every = timedelta(**kwargs)
         self.status_every_used = True
         return self
 
@@ -50,7 +53,7 @@ class Scheduler:
             start_time = datetime.now()
             func()
             delta = datetime.now() - start_time
-            logging.info(f"{local_datetime_string()}: {func.__name__} Task Completed. Duration: {delta}")
+            logging.info(f"{local_datetime_string()}: '{func.__name__}' Task Completed. Duration: {delta}")
 
             while True:
                 timenow = local_datetime()
@@ -58,7 +61,7 @@ class Scheduler:
                     start_time = datetime.now()
                     func()
                     delta = datetime.now() - start_time
-                    logging.info(f"{local_datetime_string()}: {func.__name__} Task Completed. Duration: {delta}")
+                    logging.info(f"{local_datetime_string()}: '{func.__name__}' Task Completed. Duration: {delta}")
                     has_ran=True
                     timenext += self.time_every
                 if (timenow!=timenext):

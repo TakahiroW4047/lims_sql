@@ -47,21 +47,21 @@ class Test_Scheduler(unittest.TestCase):
             )
 
             frozen_time.move_to(next_day)
-            time.sleep(1)
+            time.sleep(2)
             self.assertTrue(self.result==True)
 
     def test_every(self):
         with freeze_time('2020-01-01 10:30:00', tz_offset=-8) as frozen_time:
             Scheduler([self.sample_function]).every(hours=0, minutes=30).run()
-            time.sleep(1)
+            time.sleep(2)
             self.assertTrue(self.result==True)
             self.result=False
             frozen_time.tick(delta=timedelta(minutes=30))
-            time.sleep(1)
+            time.sleep(2)
             self.assertTrue(self.result==True)
             self.result=False
             frozen_time.tick(delta=timedelta(minutes=15))
-            time.sleep(1)
+            time.sleep(2)
             self.assertTrue(self.result==False)
             
     def test_on_every(self):
