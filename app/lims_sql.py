@@ -22,7 +22,7 @@ from lims_query import (
     query_update_dispo_received_date
 )
 
-config.setup(environment='PROD')
+# config.setup(environment='PROD')
 
 def main():
     logging.basicConfig(filename='log/lims_sql.log', format='%(levelname)s: %(message)s', level=logging.DEBUG)
@@ -36,7 +36,7 @@ def main():
     }
 
     kwargs_task_daily = {
-        "cutoff_month": 6, 
+        "cutoff_month": 36, 
         "tablename_dispo_history": 'dispo_history_3_years', 
         "tablename_sample_results": 'sample_results_3_years', 
         "tablename_update_date": 'update_date_3_years'
