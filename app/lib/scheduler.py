@@ -34,8 +34,7 @@ class Scheduler:
                     delta = datetime.now() - start_time
                     logging.info(f"{local_datetime_string()}: {func.__name__} Task Completed. Duration: {delta}")
                     has_ran = True
-                    new_day = self.time_on.day + 1
-                    self.time_on = self.time_on.replace(day=new_day)
+                    self.time_on += timedelta(days=1)
                 if (timenow!=self.time_on):
                     has_ran = False 
                 time.sleep(1)

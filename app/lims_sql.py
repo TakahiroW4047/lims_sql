@@ -22,7 +22,7 @@ from lims_query import (
     query_update_dispo_received_date
 )
 
-# config.setup(environment='PROD')
+# config.setup(environment='DEV')
 
 def main():
     logging.basicConfig(filename='log/lims_sql.log', format='%(levelname)s: %(message)s', level=logging.DEBUG)
@@ -48,7 +48,7 @@ def main():
     def daily():
         return SampleUpdateTask(**kwargs_task_daily)
 
-    Scheduler([hourly]).on(hour=10, minute=55).every(hours=1, minutes=0).run()
+    Scheduler([hourly]).on(hour=11, minute=55).every(hours=1, minutes=0).run()
     Scheduler([daily]).on(hour=23, minute=55).run()
 
     return None
